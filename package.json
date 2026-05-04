@@ -1,0 +1,19 @@
+{
+  "name": "cad-api-docs",
+  "version": "1.0.0",
+  "description": "通用 CAD 平台 API 设计哲学 · 研究系列",
+  "type": "module",
+  "scripts": {
+    "dev": "vitepress dev docs",
+    "build": "vitepress build docs",
+    "preview": "vitepress preview docs",
+    "import": "python scripts/import_docs.py",
+    "rewrite": "python scripts/rewrite_links.py",
+    "prepare-content": "npm run import && npm run rewrite"
+  },
+  "devDependencies": {
+    "mermaid": "^11.14.0",
+    "vitepress": "^1.5.0",
+    "vitepress-plugin-mermaid": "^2.0.17"
+  }
+}

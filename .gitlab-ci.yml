@@ -1,0 +1,43 @@
+# GitLab Pages 自动构建与发布（备选）
+# 主推方案是 GitHub Actions（见 .github/workflows/pages.yml）。
+# 当团队基础设施基于 GitLab（私有部署 / 内网托管）时启用此文件即可。
+#
+# 推送到默认分支后自动触发，约 30-60 秒后内网可访问
+
+image: node:20-alpine
+
+stages:
+  - prepare
+  - build
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+    - .vitepress/cache/
+
+prepare-content:
+  stage: prepare
+  before_script:
+    - apk add --no-cache python3
+    - ln -sf python3 /usr/local/bin/python || true
+  script:
+    - npm ci
+    - npm run prepare-content
+  artifacts:
+    paths:
+      - docs/
+    expire_in: 1 hour
+
+pages:
+  stage: build
+  needs: [prepare-content]
+  script:
+    - npm ci
+    - npm run build
+    - mv docs/.vitepress/dist public
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

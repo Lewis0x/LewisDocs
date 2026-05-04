@@ -1,0 +1,25 @@
+/* 中文阅读体验微调 */
+:root {
+  --vp-font-family-base: -apple-system, BlinkMacSystemFont, "Helvetica Neue",
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI",
+    "Microsoft YaHei", Arial, sans-serif;
+  --vp-c-brand-1: #3c8772;
+  --vp-c-brand-2: #5ea58e;
+  --vp-c-brand-3: #3c8772;
+}
+
+/* 块引用区分 [判断] [评论] [推论] [陷阱] */
+.vp-doc blockquote {
+  border-left-color: var(--vp-c-brand-1);
+}
+
+/* 让中文段落行高更舒适 */
+.vp-doc p {
+  line-height: 1.8;
+}
+
+/* 表格在窄屏下可横向滚动 */
+.vp-doc table {
+  display: table;
+  overflow-x: auto;
+}
