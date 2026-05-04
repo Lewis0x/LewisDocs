@@ -365,8 +365,116 @@ ci(gitlab): 修复 alpine 镜像 Python 路径
 | 构建产物 > 50 MB | 误把图片 / 大文件放进 docs/ | 把媒体放 CDN 或 public/ |
 | GitLab Pages 404 | base 配置错 | 改 `.vitepress/config.ts` 的 `base` |
 | CI 报 python: command not found | 镜像缺 Python | 检查 `.gitlab-ci.yml` `before_script` |
+| 搜索完全无结果 | heading 中无 `<a href="#…">` 锚点 | 不要在 `markdown.anchor` 设 `permalink: false`，VitePress 索引器靠它切 section |
+| Cloudflare workflow `Wrangler error: 10000` | API token 缺权限 | 重新建 token，确保有 `Cloudflare Pages Edit` |
+| Cloudflare workflow `project not found` | 项目名大小写不匹配 | wrangler 用 `--project-name=LewisDocs`；CF 自动小写为 `lewisdocs` 用作子域 |
+| `_watermark-manifest.json` 不该在 dist 里 | CI 漏跑 strip 步骤 | 检查 `cloudflare-pages.yml` 中 `rm -f` 那行存在 |
+| 水印重复注入 | sentinel 守卫失效 | 检查 `scripts/watermark.py` 中 `<!--lwm-->` 检测是否完整 |
 
-## 12. 给后来者的话
+## 12. 反爬运维 SOP
+
+防御层布局见 [02-design.md ADR-009](./02-design.md)。本节是**操作手册**。
+
+### 12.1 首次部署：Cloudflare 面板手工配置（一次性）
+
+部署成功后，到 Cloudflare Dashboard → Pages → LewisDocs 项目，按以下顺序点：
+
+1. **Security › Bots › Bot Fight Mode** → ON（免费版能开的全开）
+2. **Security › WAF › Custom rules** → 新建两条：
+
+   规则 #1：屏蔽已知 AI bot UA（兜底，防止有人无视 robots.txt）
+
+   ```
+   Field: User Agent
+   Operator: contains (any of)
+   Value: GPTBot, OAI-SearchBot, ClaudeBot, anthropic-ai, CCBot,
+          Bytespider, PerplexityBot, Google-Extended, Applebot-Extended,
+          Amazonbot, Diffbot, cohere-ai, Meta-ExternalAgent, FacebookBot
+   Action: Block
+   ```
+
+   规则 #2：蜜罐路径触发即拉黑
+
+   ```
+   Field: URI Path
+   Operator: contains
+   Value: /_honeypot/
+   Action: Block
+   ```
+
+3. **Security › Settings › Rate Limiting** → 新建：
+
+   ```
+   When: same client IP requests same URI > 50 times in 1 minute
+   Then: Managed Challenge (Turnstile invisible)
+   ```
+
+4. **Security › Settings › Browser Integrity Check** → ON
+
+5. **Speed › Optimization › Auto Minify** → 全关（VitePress 已自带）
+
+6. **(可选) Pro 计划：Security › Bots › Super Bot Fight Mode** → AI Scrapers and Crawlers = Block
+
+### 12.2 日常巡检（每两周）
+
+- Cloudflare Dashboard → Analytics & Logs → Security Events：看 24h Block 趋势
+- 异常波动（Block 数 > 平时 5 倍）→ 看 Top Source IP / Top User Agent
+- WAF 规则误伤：合法用户被 Challenge → 加白名单（**Security › Tools › IP Access Rules**）
+
+### 12.3 水印取证流程
+
+当怀疑某段我们的内容被采集进了某个语料 / AI 模型 / 抓取站时：
+
+```bash
+# 0) 备份 manifest（CI artifact 90 天就过期，重要构建归档到本地）
+gh run download <run-id> -n watermark-manifest-<sha>
+
+# 1) 抓嫌疑文本（任一种）：
+#   (a) 直接 stdin 喂
+echo "$SUSPECT_TEXT" | python scripts/scan_corpus.py manifest.json
+
+#   (b) 远程 URL
+python scripts/scan_corpus.py manifest.json --url https://suspicious.example.com/page
+
+#   (c) 整目录批量
+python scripts/scan_corpus.py manifest.json --dir ./downloaded_corpus/
+
+# 2) 命中输出：
+#   exact   page=platforms/onshape.html  payload=platforms/onshape.html|<build-sha>
+#   ↑ 反查到具体页面 + 具体构建版本
+
+# 3) 准备 DMCA：复制 project-docs/dmca-template.md，填入 manifest 反查的 URL
+```
+
+水印特征：每页 96 bit（48 个零宽字符），用 sentinel `<!--lwm-->...<!--/lwm-->` 包裹。
+即使被 markdown normalizer 部分清理，前 24 字符 prefix match 仍能命中（partial）。
+
+### 12.4 误报响应
+
+合法读者被 Cloudflare 误挡（极少见）：
+- 在 CF Dashboard → Security Events → 找到该 IP 的 Block 记录
+- 临时白名单：Security › Tools › IP Access Rules → Action: Allow
+- 长期方案：调整 WAF 规则的精度（缩小 UA 列表 / 提高 Rate Limit 阈值）
+
+### 12.5 升级路径（按需启用）
+
+| 触发条件 | 升级动作 |
+|---|---|
+| 单月 Block > 10k | 升 Cloudflare Pro（$20/月）开 Super Bot Fight Mode |
+| 出现大规模分布式爬取 | 加 Cloudflare Turnstile widget 到所有 nav 链接（需改主题，非透明） |
+| 内容被泄漏到公开数据集 | 走 DMCA 模板（`project-docs/dmca-template.md`） + Hugging Face removal request |
+| 持续被同一 IP 段攻击 | 在 CF 面板加国家 / 网段级 Block |
+
+### 12.6 不要做的事
+
+- ❌ 不要禁用 watermark.py（CI 会失去取证能力）
+- ❌ 不要把 `_watermark-manifest.json` 上传到任何公开仓库（manifest 一旦泄漏，水印就废）
+- ❌ 不要把 robots.txt 改成 `Allow:` —— 反爬整套设计假设我们 deny by default
+- ❌ 不要在 UI 加任何"this site is protected by …"提示（用户体验 + 反向暴露细节）
+
+---
+
+## 13. 给后来者的话
 
 这个项目刻意保持小：
 

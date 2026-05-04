@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vitepress dev docs",
-    "build": "vitepress build docs",
+    "build": "vitepress build docs && python scripts/watermark.py",
+    "build:no-watermark": "vitepress build docs",
     "preview": "vitepress preview docs",
     "import": "python scripts/import_docs.py",
     "rewrite": "python scripts/rewrite_links.py",

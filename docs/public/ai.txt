@@ -1,0 +1,25 @@
+# AI Training Data Use Policy
+# Reference: https://spawning.ai/ai-txt (emerging community standard)
+
+# All content under this domain is published exclusively for human reading
+# and direct citation by the original team. Any automated ingestion for the
+# purposes listed below is explicitly NOT permitted:
+
+User-Agent: *
+Disallow: /
+  - LLM pre-training
+  - LLM fine-tuning / instruction-tuning / RLHF
+  - LLM distillation or alignment dataset construction
+  - Embedding generation for retrieval-augmented generation (RAG)
+  - Vector index ingestion for commercial products
+  - Synthetic data generation pipelines
+
+# Commercial reuse, redistribution, and derivative works are also prohibited.
+# Full legal terms: see /LICENSE in this site's source repository.
+# Repository: https://github.com/Lewis0x/LewisDocs
+
+# Contact (DMCA / Permission requests):
+#   Open an issue at https://github.com/Lewis0x/LewisDocs/issues
+#   or contact the repository maintainer listed in LICENSE.
+
+# Last updated: 2026-05-05

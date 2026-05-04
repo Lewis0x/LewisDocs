@@ -43,6 +43,7 @@
 | F9 | 章节大纲（右侧 outline） | P1 | 右侧自动出现 H2/H3 大纲 |
 | F10 | 显示「最后更新时间」 | P2 | 文档底部显示 git 最后修改 |
 | F11 | 核心架构图与时间演进线以可视化方式呈现 | P0 | 关键 ASCII 图替换为 Mermaid，自动跟随浅 / 深色 |
+| F12 | 反爬虫：默认拒索引 + AI 训练拒绝 + 商业抓取阻断 + 内容溯源 | P0 | robots.txt + meta robots + Cloudflare WAF + 蜜罐 + 零宽水印 |
 
 ## 4. 非功能性需求
 
@@ -69,7 +70,9 @@
 - ❌ 不自定义复杂主题 —— VitePress 默认主题已够用
 - ❌ 不做评论 / 标注 / 用户系统
 - ❌ 不做 PDF 导出 —— 浏览器自带打印即可
-- ❌ 不做访问统计 —— 内部站点，按需后加
+- ❌ 不做访问统计 —— 反爬已加（F12），但用户行为统计仍按需
+- ❌ 不做对用户可见的反爬元素 —— 不加 footer 版权声明、不禁右键、不上登录墙
+- ❌ 不接 hCaptcha / reCAPTCHA —— 仅用 Cloudflare Turnstile 隐式挑战
 
 ## 6. 验收标准
 
@@ -82,8 +85,9 @@
 | AC5 | 构建耗时 | < 30 s | ✅ 7.87 s |
 | AC6 | 中文搜索 | 「几何内核」命中 ≥ 3 文档 | ✅（站点内验证） |
 | AC7 | 回链跳转 | 任选 5 处点击到目标章节 | ✅（HTML id 全对） |
-| AC8 | 部署配置 | GitHub Actions 主推 + GitLab 备选 | ✅ |
+| AC8 | 部署配置 | Cloudflare Pages 主推 + GH Pages / GitLab 备选 | ✅ |
 | AC9 | Mermaid 图渲染 | 关键 20 张图全部以 SVG 渲染 | ✅（theory 4 + 8 平台 × 2） |
+| AC10 | 反爬五层就位 | robots/ai.txt + 25+ AI bot meta + WAF + 蜜罐 + 水印 + LICENSE | ✅（11/11 页含水印 + 0 generator 指纹） |
 
 ## 7. 关键约束
 

@@ -1,0 +1,79 @@
+LewisDocs Content License
+=========================
+
+Copyright (c) 2024-2026 Lewis (https://github.com/Lewis0x)
+
+This work is licensed under the Creative Commons
+Attribution-NonCommercial-NoDerivatives 4.0 International License
+(CC BY-NC-ND 4.0), with the additional restrictions listed below.
+
+To view a copy of the base license, visit
+https://creativecommons.org/licenses/by-nc-nd/4.0/
+
+================================================================================
+SUMMARY (informal — the precise terms are the CC BY-NC-ND 4.0 legal code
+plus the AI Use Restriction Addendum below)
+================================================================================
+
+You are free to:
+  - Share — copy and redistribute the material in any medium or format,
+    with credit to the author and a link to this license.
+
+Under the following terms:
+  - Attribution        — You must give appropriate credit.
+  - NonCommercial      — You may not use the material for commercial purposes.
+  - NoDerivatives      — If you remix, transform, or build upon the material,
+                         you may not distribute the modified material.
+  - No additional restrictions other than those required by law.
+
+================================================================================
+AI USE RESTRICTION ADDENDUM
+================================================================================
+
+Notwithstanding any other license terms, the following uses of this work
+(including its text, code samples, diagrams, tables, and any extracted
+representation thereof) are EXPRESSLY PROHIBITED without prior written
+permission from the copyright holder:
+
+  1. Training, fine-tuning, instruction-tuning, RLHF, distillation, or
+     any form of weight modification of large language models, vision
+     models, multi-modal models, or other machine-learning systems.
+
+  2. Generation of embeddings, vector representations, or similar
+     derivative artifacts that are intended for ingestion into commercial
+     retrieval-augmented generation (RAG) systems, vector databases, or
+     similar inference pipelines.
+
+  3. Construction of synthetic-data pipelines, alignment datasets,
+     evaluation benchmarks, or any dataset offered for sale, sublicense,
+     or paid access.
+
+  4. Bulk programmatic crawling, scraping, mirroring, or archival
+     beyond what is strictly necessary for direct human reading by an
+     individual user.
+
+This restriction applies regardless of whether the AI / ML training is
+conducted commercially, academically, or in an open-source capacity.
+
+The copyright holder reserves all rights not expressly granted, including
+the right to seek statutory damages, injunctive relief, and DMCA
+takedown remedies for any violation.
+
+================================================================================
+PERMISSION REQUESTS
+================================================================================
+
+For permission to use this work in any of the prohibited ways, or for
+any commercial purpose, please open an issue at
+https://github.com/Lewis0x/LewisDocs/issues with subject prefix
+"[License Request]" and describe the intended use.
+
+================================================================================
+DISCLAIMER
+================================================================================
+
+THIS WORK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHOR OR COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY ARISING FROM USE OF THIS WORK.

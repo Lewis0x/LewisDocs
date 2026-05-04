@@ -1,0 +1,80 @@
+name: Deploy to Cloudflare Pages
+
+# 触发：默认分支 push。GitHub Pages 已停用（pages.yml 加了 if:false）。
+# 需要的 GitHub Secrets：
+#   - CLOUDFLARE_API_TOKEN  (Account › Cloudflare Pages › Edit)
+#   - CLOUDFLARE_ACCOUNT_ID (Cloudflare 仪表板右侧栏 Account ID)
+# 项目名固定 LewisDocs；首次部署时 wrangler 会自动创建。
+# 默认上线地址：https://lewisdocs.pages.dev/  （Cloudflare 把项目名 lower-case）
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: cloudflare-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # lastUpdated 需要完整 git 历史
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Cache VitePress build artifacts
+        uses: actions/cache@v4
+        with:
+          path: docs/.vitepress/cache
+          key: ${{ runner.os }}-vitepress-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('source/**/*.md', 'docs/**/*.md', 'docs/.vitepress/**/*.{ts,js,css}') }}
+          restore-keys: |
+            ${{ runner.os }}-vitepress-${{ hashFiles('**/package-lock.json') }}-
+            ${{ runner.os }}-vitepress-
+
+      - name: Prepare content (import + rewrite links)
+        run: npm run prepare-content
+
+      - name: Build (vitepress + watermark)
+        run: npm run build
+
+      - name: Upload watermark manifest as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: watermark-manifest-${{ github.sha }}
+          path: docs/.vitepress/dist/_watermark-manifest.json
+          retention-days: 90
+          if-no-files-found: warn
+
+      - name: Strip watermark manifest from public dist
+        # manifest 是私密映射表，绝不能跟着 deploy 上线
+        run: rm -f docs/.vitepress/dist/_watermark-manifest.json
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy docs/.vitepress/dist --project-name=LewisDocs --branch=main --commit-dirty=true

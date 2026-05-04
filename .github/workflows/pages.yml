@@ -1,5 +1,10 @@
-name: Deploy VitePress site to GitHub Pages
+name: Deploy VitePress site to GitHub Pages (DISABLED)
 
+# 已主推 Cloudflare Pages（见 cloudflare-pages.yml）；本 workflow 留作回退预案。
+# 启用回退步骤：
+#   1. 把下面 `if: false` 改成 `if: true`
+#   2. 把 docs/.vitepress/config.ts 的 base 改回 '/LewisDocs/'
+#   3. 在 cloudflare-pages.yml 加 `if: false` 关掉
 on:
   push:
     branches: [main, master]
@@ -17,6 +22,7 @@ concurrency:
 
 jobs:
   build:
+    if: false   # ← 已停用，主推 Cloudflare Pages（见 cloudflare-pages.yml）
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -63,6 +69,7 @@ jobs:
           path: docs/.vitepress/dist
 
   deploy:
+    if: false   # ← 已停用，主推 Cloudflare Pages
     needs: build
     runs-on: ubuntu-latest
     environment:

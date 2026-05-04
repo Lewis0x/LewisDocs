@@ -1,0 +1,110 @@
+# LewisDocs robots policy
+# 团队内部研究站点。默认对所有爬虫拒绝索引；显式列出已知 AI / 商业训练抓取器。
+# 不提供 Sitemap，不主动暴露页面清单。
+# 法律层细节见 /LICENSE 与 /ai.txt。
+
+# ---------------------------------------------------------------------------
+# 通用：所有爬虫一律拒
+# ---------------------------------------------------------------------------
+User-agent: *
+Disallow: /
+
+# ---------------------------------------------------------------------------
+# AI 训练 / RAG 数据抓取（按 OpenAI / Anthropic / Google / Bytedance 等公开声明的 UA）
+# ---------------------------------------------------------------------------
+User-agent: GPTBot
+Disallow: /
+
+User-agent: OAI-SearchBot
+Disallow: /
+
+User-agent: ChatGPT-User
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: Claude-Web
+Disallow: /
+
+User-agent: cohere-ai
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: Applebot-Extended
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: FacebookBot
+Disallow: /
+
+User-agent: Meta-ExternalAgent
+Disallow: /
+
+User-agent: Meta-ExternalFetcher
+Disallow: /
+
+User-agent: PerplexityBot
+Disallow: /
+
+User-agent: Perplexity-User
+Disallow: /
+
+User-agent: Amazonbot
+Disallow: /
+
+User-agent: DuckAssistBot
+Disallow: /
+
+User-agent: ImagesiftBot
+Disallow: /
+
+User-agent: Timpibot
+Disallow: /
+
+User-agent: ai2bot
+Disallow: /
+
+User-agent: Kangaroo Bot
+Disallow: /
+
+User-agent: iaskspider
+Disallow: /
+
+User-agent: YouBot
+Disallow: /
+
+User-agent: Webzio-Extended
+Disallow: /
+
+User-agent: Diffbot
+Disallow: /
+
+User-agent: Omgilibot
+Disallow: /
+
+User-agent: omgili
+Disallow: /
+
+User-agent: PanguBot
+Disallow: /
+
+User-agent: Sidetrade indexer bot
+Disallow: /
+
+# ---------------------------------------------------------------------------
+# 蜜罐：禁止抓 honeypot 路径，正常爬虫遵守即可避开陷阱；
+# 不遵守的爬虫一旦命中 Cloudflare WAF 会自动拉入 24h 黑名单。
+# ---------------------------------------------------------------------------
+User-agent: *
+Disallow: /_honeypot/

@@ -8,8 +8,10 @@
 |---|---|
 | 为什么要这个站点、要做什么、不做什么 | [project-docs/01-需求文档](./project-docs/01-requirements.md) |
 | 技术选型、架构决策、ADR 记录 | [project-docs/02-方案文档](./project-docs/02-design.md) |
-| 如何开发、调试、升级 VitePress | [project-docs/03-开发文档](./project-docs/03-development.md) |
+| 如何开发、调试、升级 VitePress、反爬运维 SOP | [project-docs/03-开发文档](./project-docs/03-development.md) |
 | 站点访问者如何用搜索、跳转、深色模式等 | [project-docs/04-使用文档](./project-docs/04-usage.md) |
+| 内容版权与 AI 训练限制条款 | [LICENSE](./LICENSE) |
+| 命中泄漏后的 DMCA 流程 | [project-docs/dmca-template.md](./project-docs/dmca-template.md) |
 
 
 ## 在本地查看
@@ -37,18 +39,30 @@ git add . && git commit -m "update content" && git push
 
 ## 部署
 
-### 选项 A（主推）：GitHub Pages
+### 选项 A（主推）：Cloudflare Pages
 
-1. 仓库 Settings → Pages → Source 选 "GitHub Actions"
-2. 推到 `main` 或 `master` 分支自动构建（CI 见 `.github/workflows/pages.yml`）
-3. 访问 `https://<user>.github.io/<repo>/`
-4. 子路径部署：把 `.vitepress/config.ts` 的 `base` 改为 `'/<repo>/'`
+1. 在 Cloudflare 拿到 API Token（`Cloudflare Pages › Edit` 权限）+ Account ID
+2. 仓库 Settings → Secrets and variables → Actions 加：
+   - `CLOUDFLARE_API_TOKEN`
+   - `CLOUDFLARE_ACCOUNT_ID`
+3. 推到 `main`，CI（`.github/workflows/cloudflare-pages.yml`）自动构建并部署
+4. 默认 URL：`https://lewisdocs.pages.dev/`（Cloudflare 自动小写项目名）
+5. 首次部署成功后，到 Cloudflare 面板按 [03-development.md §12](./project-docs/03-development.md) 启用 WAF 规则、Bot Fight Mode、Rate Limiting
 
-### 选项 B：GitLab Pages
+### 选项 B（已停用，可回退）：GitHub Pages
 
-1. 把项目推到 GitLab 仓库的默认分支
-2. CI 自动构建（见 `.gitlab-ci.yml`），30-60 秒后访问 `https://<group>.gitlab.io/<project>/`
-3. 自定义域名在 GitLab 项目 Settings → Pages 配置
+`.github/workflows/pages.yml` 加了 `if: false`。回退步骤：
+
+1. 把 `if: false` 改成 `if: true`
+2. 把 `docs/.vitepress/config.ts` 的 `base` 改回 `'/LewisDocs/'`
+3. 在 `cloudflare-pages.yml` 加 `if: false` 关掉
+4. URL 变回 `https://<user>.github.io/<repo>/`
+
+### 选项 C：GitLab Pages
+
+1. 推到 GitLab 默认分支
+2. CI 见 `.gitlab-ci.yml`
+3. 访问 `https://<group>.gitlab.io/<project>/`
 
 ### 选项 C：内网 Nginx
 

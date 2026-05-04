@@ -24,17 +24,48 @@ export default withMermaid({
   title: '通用 CAD 平台 API 设计哲学',
   description: '8 个主流 CAD 平台的 API 设计深度剖析、横向对比、理论框架',
   lang: 'zh-CN',
-  // GitHub Pages 项目站点 URL = https://<user>.github.io/<repo>/
-  // 默认部署到 https://lewis0x.github.io/LewisDocs/，所以 base 必须是 /LewisDocs/
-  // 如未来绑定自定义域名（CNAME），把 base 改回 '/'
-  base: '/LewisDocs/',
+  // 部署目标：Cloudflare Pages，根路径 → base = '/'
+  // 如回退到 GH Pages 子路径 https://lewis0x.github.io/LewisDocs/，改回 '/LewisDocs/'
+  base: '/',
   cleanUrls: true,
   lastUpdated: true,
   ignoreDeadLinks: true,
 
+  // 反爬声明式信号（详见 project-docs/02-design.md ADR-009）：
+  //   - 拒绝所有合规通用爬虫 + 搜索引擎索引
+  //   - 显式列出已知 AI / RAG 抓取器
+  //   - referrer no-referrer 减少出站隐私泄露
+  //   - generator 用空字符串覆盖（transformHead 兜底再删一遍）
   head: [
     ['meta', { name: 'theme-color', content: '#3c8772' }],
+    ['meta', { name: 'robots', content: 'noindex,nofollow,noarchive,nosnippet,noimageindex,nocache' }],
+    ['meta', { name: 'googlebot', content: 'noindex,nofollow,noarchive' }],
+    ['meta', { name: 'bingbot', content: 'noindex,nofollow' }],
+    ['meta', { name: 'GPTBot', content: 'noindex' }],
+    ['meta', { name: 'OAI-SearchBot', content: 'noindex' }],
+    ['meta', { name: 'ChatGPT-User', content: 'noindex' }],
+    ['meta', { name: 'ClaudeBot', content: 'noindex' }],
+    ['meta', { name: 'anthropic-ai', content: 'noindex' }],
+    ['meta', { name: 'Claude-Web', content: 'noindex' }],
+    ['meta', { name: 'Google-Extended', content: 'noindex' }],
+    ['meta', { name: 'Applebot-Extended', content: 'noindex' }],
+    ['meta', { name: 'CCBot', content: 'noindex' }],
+    ['meta', { name: 'Bytespider', content: 'noindex' }],
+    ['meta', { name: 'PerplexityBot', content: 'noindex' }],
+    ['meta', { name: 'Amazonbot', content: 'noindex' }],
+    ['meta', { name: 'Diffbot', content: 'noindex' }],
+    ['meta', { name: 'cohere-ai', content: 'noindex' }],
+    ['meta', { name: 'referrer', content: 'no-referrer' }],
+    ['meta', { name: 'generator', content: '' }],
   ],
+
+  // 删除 VitePress 默认注入的 generator 指纹（把版本号送出去太傻）
+  transformHead({ assets, head }) {
+    return head.filter(
+      ([tag, attrs]) =>
+        !(tag === 'meta' && (attrs as any)?.name === 'generator' && (attrs as any)?.content?.startsWith('VitePress')),
+    )
+  },
 
   themeConfig: {
     nav: [
