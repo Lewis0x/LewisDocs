@@ -4,8 +4,8 @@ name: Deploy to Cloudflare Pages
 # 需要的 GitHub Secrets：
 #   - CLOUDFLARE_API_TOKEN  (Account › Cloudflare Pages › Edit)
 #   - CLOUDFLARE_ACCOUNT_ID (Cloudflare 仪表板右侧栏 Account ID)
-# 项目名固定 LewisDocs；首次部署时 wrangler 会自动创建。
-# 默认上线地址：https://lewisdocs.pages.dev/  （Cloudflare 把项目名 lower-case）
+# 项目名 lewisdocs（CF Pages 要求全小写；首次部署前由下面的 project create 步骤建立）。
+# 默认上线地址：https://lewisdocs.pages.dev/
 
 on:
   push:
@@ -80,11 +80,11 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages project create LewisDocs --production-branch=main
+          command: pages project create lewisdocs --production-branch=main
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy docs/.vitepress/dist --project-name=LewisDocs --branch=main --commit-dirty=true
+          command: pages deploy docs/.vitepress/dist --project-name=lewisdocs --branch=main --commit-dirty=true
