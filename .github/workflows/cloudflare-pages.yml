@@ -72,6 +72,16 @@ jobs:
         # manifest 是私密映射表，绝不能跟着 deploy 上线
         run: rm -f docs/.vitepress/dist/_watermark-manifest.json
 
+      # 首次部署：CF Pages 项目还不存在，wrangler 不会自动创建。
+      # continue-on-error: 项目已存在时此步会失败但不影响后续 deploy。
+      - name: Ensure Cloudflare Pages project exists
+        uses: cloudflare/wrangler-action@v3
+        continue-on-error: true
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages project create LewisDocs --production-branch=main
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
