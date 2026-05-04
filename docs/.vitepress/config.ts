@@ -137,9 +137,9 @@ export default withMermaid({
 
   markdown: {
     lineNumbers: false,
-    anchor: {
-      permalink: false,
-    },
+    // ⚠️ 不要设 `anchor.permalink: false` — VitePress local search 的 splitPageIntoSections
+    // 通过 heading 内的 <a href="#…">  锚点切分文档，禁掉 permalink 会导致整个搜索索引为空。
+    // 默认 permalink 是 true（hover 显示 # 链接），保留即可。
   },
 
   // Mermaid 配置：跟随 VitePress 主题切换深浅色
