@@ -177,6 +177,67 @@ V1 第一次试点（2026-05-05）：
 3. T2 候选里有大量 AutoCAD 内部类名（AcDbDatabase / ObjectId / AcEditor 等）—— 这些其实是 T1 的"AutoCAD 类库前缀"应已在 glossary AcDb / AcGe / AcRx 条目下涵盖，不必再标
 4. **下次跑给非首批文档时，先用 `--min-count 3 --top 30` 过一遍候选清单，比一开始就看完整 164 条更高效**
 
+### 9.3 全 8 篇厂商文档铺开（已完成）
+
+继 3.1 试点之后，分两批把 T2 注释推到剩余 7 篇：
+
+| 文档 | T2 注释数 | 关键词样例（按重要性） |
+|---|---:|---|
+| 3.1 AutoCAD | 10 | in-process, ObjectDBX, Managed .NET API, COM Automation, ABI, Object Enabler, handle, Transaction 模式, clean rebuild, Reactor |
+| 3.2 CATIA | 6 | Workspace/Framework/Module, IdentityCard, mkmk, Authorized API vs Internal API, Late Type/TIE/BOA/Extension, Spec/Result/Update |
+| 3.3 NX | 7 | 语言绑定, UFunc, Mach Series, ICAD, 关联性持久对象, Block UI Styler, D-Cubed |
+| 3.4 Onshape | 12 | 强类型, 单位安全, 服务端运行, 路径即语义, 持续部署, API 速率限制, branch, tagged commit, commit, Deterministic ID, Associativity, OAuth 2.0 |
+| 3.5 MicroStation | 4 | MicroStationAPI, CONNECT Edition, OLE Compound File, p-code |
+| 3.6 SolidWorks | 3 | Functional Delivery (FD), IModelDocExtension, Document Manager API |
+| 3.7 SketchUp | 9 | REPL, .rbz, face-based, Observer, CEF (Chromium Embedded Framework), logical pixels, Overlays API, MRI Ruby, duck-typing |
+| 3.8 FreeCAD | 8 | MVC, boost::signals2, headless, 一等公民, Workbench, upstream, FeaturePython, DocumentObject |
+| **合计** | **59** | |
+
+**铺开过程的工程发现：**
+
+1. **`<Term def="..."` 的内层 ASCII `"` 必须改成全角 `""`**——Vue HTML 解析器把内层 ASCII 双引号当作属性值结束符，触发 "Invalid end tag" 编译错。Onshape 试点期间首次发现，3.7/3.8 大批量出现（作者本能用 ASCII 引号包"低门槛"等强调）。已写 `scripts/fix_term_quotes.py` 自动化转换：本批 40 处全部已修。**作者写作时不必刻意区分**，提交前跑一次脚本即可。
+2. **每篇文档的 T2 密度差异很大**：3.4 Onshape (云原生 + git 隐喻) 与 3.7 SketchUp (扩展生态术语) 候选最多；3.5 MicroStation 与 3.6 SolidWorks 候选最少（多数概念已被 T1 glossary 收录或属于 T4 品牌）。这印证了"按文档主题自适应"比"统一密度"更合理。
+3. **`find_jargon.py` 经一次大幅调优**：T4_BRANDS 加了 ~80 词（Onshape 概念词 / AutoCAD 类型前缀 / MicroStation EC 类型 / FreeCAD Topo 类 / NX Builder 类 / Extrude/Fillet 等特征名），又对 2-gram 加去重（避免"microversion microversion"）。误判率从 ~30% 降到 ~10%。
+
+**验证（npm run build）：**
+- 构建 13.68s 干净通过，0 Vue parse 错
+- 0 broken anchors，805 个 id 全部可达
+- 12/12 页水印
+- dist HTML 中 118 个 lewisdocs-term span（= 59 Term × 2）
+
+**经验沉淀（除 9.2 外的新发现）：**
+1. **批量注释比试点更难的不是判断 tier，而是保证定义文本风格一致**。建议固定先想清"是什么 + 关键特征"两块再写，而不是一句话表达。
+2. **首次出现的位置选择**：TL;DR / Key Findings / 章节首段 三选一。优先 Key Findings（最容易被读者顺序读到，hover 一次后续不再标）。
+3. **避免与 T1 已有概念重复**：3.5 MicroStation 跑出 ECObjects / ECSchema 等候选，但这些在 glossary 已有条目，应直接用 `[link]` 而非新加 `<Term>`。
+
+### 9.4 T2 → T1 季度审视（首次执行）
+
+8 篇厂商文档全部 T2 注释完成后，跑全量 `find_jargon.py --top 40 --min-count 3` 看哪些 T2 术语在 ≥ 2 篇文档出现，应升级为 T1 进 glossary。
+
+**升级 4 个**（满足 §5 的"≥ 2 篇文档 + 总频次 ≥ 10"门槛）：
+
+| 术语 | 总频次 | 文档数 | 处理 |
+|---|---:|---:|---|
+| `in-process` | 18 | 5 | 新增 glossary 条目；3.1 AutoCAD 的原 `<Term def>` 改为 `[link](/glossary#in-process)` |
+| `Observer` | 13 | 5 | 新增 glossary 条目（含全平台对应名 Reactor/CallBack/Subscriber 列举）；3.7 SketchUp 的原 `<Term def>` 改为 `[link]` |
+| `ODA (Open Design Alliance)` | 21 | 5 | 新增 glossary 条目（DWG 词条已经提及但未独立条目，本次独立成节） |
+| `GRIP` | 15 | 3 | 新增 glossary 条目（NX 1980s 遗产语言，作为"CAD 各搞自家脚本"案例） |
+
+**未升级**（候选但被否决）：
+- `DS / NET / COM / Wikipedia / Software / Manager / Property / Framework / Late / Authorized / Internal / Spec / Engineering / Coach / mark` —— 要么是品牌（DS Wikipedia）/通用缩写（NET COM）/单字母拆分（Late Type 的 Late 单独无意义）/泛化词（Manager Software）。
+- `App/Gui` (12)、`Spec/Result/Update` (10) —— 只在 1-2 篇文档出现核心讨论，强 CAD 厂商专属，留作 T2 即可。
+- `FD` (16)、`Warehouse` (13)、`PartDesign` (11)、`I-DEAS` (11)、`RealThunder` (11) —— 都集中在单一文档，不满足"≥ 2 篇"。
+
+**链接修正过程的踩坑：**
+- glossary 条目顶端"深入：…"必须使用真实存在的 anchor，否则构建后会产生 broken link
+- 实操：先写好条目内容（包含猜测的 anchor）→ 跑构建 → 查 dist/ HTML 中实际 id → 改正 anchor。这个流程比"写时记忆 anchor"可靠得多
+- 有 4 处初始猜测的 anchor 全部错（`一、历史演进-从-uniapt-2406` 实际是 `一、历史演进-从-uniapt-1972-到-nx-x-2024`）。建议**未来加 glossary 条目时，先 grep `dist/<page>.html` 确认 anchor 再写**
+
+**升级后的 dist 校验：**
+- 0 broken anchors（含 glossary "深入" 链接）
+- Term wrappers 从 59 减为 57（少了 2 = in-process + Observer 的转换）
+- 4 个新 glossary 条目（GRIP/in-process/ODA/Observer）的 anchor 全部可达
+
 ---
 
 ## 10. 不做

@@ -233,7 +233,7 @@ Application（单例进程入口）
 
 **样本中范式选择对平台特性的影响** [3.4 §三 git 式四层数据模型](/platforms/onshape#三、核心数据模型-git-式四层)；[3.2 §一 历史演进（V6 "no files"）](/platforms/catia#一、历史演进-从-cati-1977-到-3dexperience-2014)；[3.5 §八 iTwin Platform](/platforms/microstation#八、itwin-platform-云原生重构)：
 - File-based + [PDM](/glossary#pdm-product-data-management-plm-product-lifecycle-management)：样本中 7/8 平台采用（AutoCAD/CATIA V5/NX/SolidWorks/SketchUp/MicroStation/FreeCAD）
-- Database-based "no files"：CATIA V6（强制 ENOVIA）、Onshape（cloud-native）、iTwin（联邦数据）
+- <Term def="数据库驱动的文档存储范式：Document = 数据库实体而非磁盘文件，配套 ChangeSet/Microversion 时间线。让实时多人协作成为可能（每编辑一笔即生成不可变版本，分支/合并按 git 模型工作）。代价：必须强制上云或本地部署数据库，传统复制 .dwg 给同事工作流被打破">Database-based</Term> "no files"：CATIA V6（强制 ENOVIA）、Onshape（cloud-native）、iTwin（联邦数据）
 
 > **[判断]** Database-based 范式在云协作场景中显示明显优势，但强制迁移可能遇阻——CATIA V6 "no files"导致部分客户坚守 V5 是相关案例 [3.2 §一 历史演进](/platforms/catia#一、历史演进-从-cati-1977-到-3dexperience-2014)。务实路径：新平台从第一天采用 Database-based，老平台用"双轨支持"渐进过渡。**[证据等级 B]**
 
@@ -819,7 +819,7 @@ with doc.transaction():
 模式 D：MCP（Model Context Protocol）
 ```
 
-⭐ MCP 是 2024-2026 新兴的标准化方向。Anthropic 推动的 MCP 协议让 CAD 平台可以暴露给任意 LLM，无需为每个 LLM 单独集成。"新平台应优先支持 MCP"是基于 2026 年初观察的判断，未来 MCP 是否成为事实标准存在不确定性——审慎建议是关注 MCP 演进，但不必把全部 AI 集成赌在 MCP 上。
+⭐ <Term def="Model Context Protocol，Anthropic 2024 年推出的开放协议，让 LLM 通过统一接口接入外部数据源 / 工具 / 服务（类似 AI 时代的 LSP / OpenAPI）。CAD 平台只要暴露 MCP server，任意支持 MCP 的 LLM 都能调用其功能">MCP</Term> 是 2024-2026 新兴的标准化方向。Anthropic 推动的 MCP 协议让 CAD 平台可以暴露给任意 LLM，无需为每个 LLM 单独集成。"新平台应优先支持 MCP"是基于 2026 年初观察的判断，未来 MCP 是否成为事实标准存在不确定性——审慎建议是关注 MCP 演进，但不必把全部 AI 集成赌在 MCP 上。
 
 ---
 

@@ -29,13 +29,13 @@
 
 | # | 平台 | 一句话定位 |
 |---|---|---|
-| 3.1 | **AutoCAD ObjectARX** | 30+ 年的 in-process 原生 C++ SDK；六层金字塔分层服务设计师/IT/ISV/Web；Custom Entity + Object Enabler 平台经济学的经典实现 |
+| 3.1 | **AutoCAD ObjectARX** | 30+ 年的 [in-process](/glossary#in-process) 原生 C++ SDK；六层金字塔分层服务设计师/IT/ISV/Web；Custom Entity + Object Enabler 平台经济学的经典实现 |
 | 3.2 | **CATIA CAA RADE** | 严格组件 + 接口模型；编译期强制 Authorized vs Internal API 边界；Spec/Result/Update 声明式建模；面向超大型工程组织 |
 | 3.3 | **Siemens NX (NX Open)** | 样本中较罕见的"Common API 四语言完全对等"；Builder + Commit 范式；Synchronous Technology 直接编辑 + 关联性维持 |
 | 3.4 | **Onshape** | 样本中较少见的 web-only / cloud-native 一等公民；Git 式数据模型（branch/merge/microversion）；FeatureScript 强类型 + 单位安全的领域语言 |
 | 3.5 | **MicroStation + iTwin** | "schema-first"工程哲学（ECSchema/BIS）；桌面 + 云双轨而非替代；iModel 联邦数字孪生而非单一权威 |
 | 3.6 | **SolidWorks** | COM Automation 单层架构刻意简化；IModelDocExtension 接口版本化的 COM 时代范式；面向中端工程师的"上手快、深度有限" |
-| 3.7 | **SketchUp Ruby** | 嵌入式脚本极简哲学的代表；17+ 类高粒度 Observer；Face-based 简化几何换性能；保守上云不破坏 Ruby 生态 |
+| 3.7 | **SketchUp Ruby** | 嵌入式脚本极简哲学的代表；17+ 类高粒度 [Observer](/glossary#observer-观察者模式)；Face-based 简化几何换性能；保守上云不破坏 Ruby 生态 |
 | 3.8 | **FreeCAD** | 开源参数化 CAD 讨论中最常被引用的平台之一；App/Gui 严格 MVC 分离；Python 集成较深（FeaturePython）；22 年才到 1.0 的工程治理节奏值得关注 |
 
 ---
