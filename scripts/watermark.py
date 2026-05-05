@@ -113,15 +113,25 @@ def main() -> int:
         payload = f'{rel}|{build_id}'
         watermark = encode(payload)
 
-        # 用 sentinel HTML 注释包裹，便于 scan_corpus.py 精确定位 / 反查
-        marker = f'<!--lwm-->{watermark}<!--/lwm-->'
+        # 用 sentinel HTML 注释包裹，便于 scan_corpus.py 精确定位 / 反查。
+        # 包一层 <span hidden aria-hidden=true> 给截屏 / 文本提取工具一个语义钩子。
+        marker = (
+            f'<span hidden aria-hidden="true" style="display:none">'
+            f'<!--lwm-->{watermark}<!--/lwm-->'
+            f'</span>'
+        )
 
-        # 注入到 <main> 起始位置；找不到 <main> 退回到 <body> 之后
-        new_text, count = re.subn(r'(<main\b[^>]*>)', r'\1' + marker, text, count=1)
+        # ⚠️ 注入位置：必须在 Vue mount 点（`#app`）之外，否则 hydration 会失败
+        # （Vue 期望 `<main>` 第一个子节点是 `.vp-doc`，遇到注释 + 零宽字符就 mismatch
+        # → 客户端清空 SSR DOM 重新渲染 → 用户看到空白页 + 仅 footer "最后更新"）。
+        # 安全位置 = `</body>` 之前（在 `#app` 容器之外）。
+        # 折中：scraper 抓 <article>/<main> 时拿不到水印，但抓全文 / .get_text() 仍能拿到。
+        new_text, count = re.subn(r'(</body\s*>)', marker + r'\1', text, count=1, flags=re.IGNORECASE)
         if count == 0:
-            new_text, count = re.subn(r'(<body\b[^>]*>)', r'\1' + marker, text, count=1)
+            # Fallback：找不到 </body> 就放在文档末尾
+            new_text = text + marker
+            count = 1
         if count == 0:
-            # 没找到 <main> 也没找到 <body> —— 跳过水印注入但保留 generator strip
             html_path.write_text(text, encoding='utf-8')
             skipped += 1
             continue
