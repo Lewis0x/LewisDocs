@@ -28,50 +28,51 @@ def fix_one(s: str) -> tuple[str, int]:
     out = []
     i = 0
     fixed = 0
+    prefix = '<Term def="'
     while i < len(s):
-        match_start = s.find('<Term def="', i)
-        if match_start < 0:
+        ms = s.find(prefix, i)
+        if ms < 0:
             out.append(s[i:])
             break
-        out.append(s[i:match_start])
-        # find closing > of this tag
-        gt = s.find('>', match_start)
-        if gt < 0:
-            out.append(s[match_start:])
-            break
-        tag = s[match_start:gt+1]
-        # tag = '<Term def="<value>">'
-        # value = everything between match_start+11 and the last `"` before gt
-        prefix = '<Term def="'
-        # find LAST `"` before the closing `>`
-        last_quote = tag.rfind('"', 0, len(tag)-1)  # exclude trailing >
-        # Actually `tag` ends with `>`, so we need last `"` before that >
-        # tag[len(tag)-1] = '>'; tag[len(tag)-2] should be '"'
-        if tag[-2] != '"':
+        out.append(s[i:ms])
+        val_start = ms + len(prefix)
+        # Find the def attribute's closing quote.
+        # A real attribute terminator is `"` followed by ` ` (next attr) or `>` (tag end) or `/` (self-close).
+        # Inner ASCII quotes inside the value would be `"<chinese-char>` or similar — never followed by ` ` or `>`.
+        j = val_start
+        end = -1
+        while j < len(s):
+            if s[j] == '"' and j + 1 < len(s) and s[j+1] in ' >/':
+                end = j
+                break
+            if s[j] == '\n' and j - val_start > 1000:
+                # safety: don't scan unbounded
+                break
+            j += 1
+        if end < 0:
             # malformed; skip
-            out.append(tag)
-            i = gt + 1
+            out.append(s[ms:val_start])
+            i = val_start
             continue
-        value = tag[len(prefix):-2]  # strip prefix and trailing `">`
-        # convert inner ASCII `"` to alternating U+201C/U+201D
-        new_value_chars = []
+        value = s[val_start:end]
+        # Convert inner ASCII `"` to alternating U+201C/U+201D
+        new_chars = []
         opening = True
         for ch in value:
             if ch == '"':
-                new_value_chars.append('“' if opening else '”')
+                new_chars.append('“' if opening else '”')
                 opening = not opening
                 fixed += 1
             else:
-                new_value_chars.append(ch)
-        new_value = ''.join(new_value_chars)
-        new_tag = prefix + new_value + '">'
-        out.append(new_tag)
-        i = gt + 1
+                new_chars.append(ch)
+        new_value = ''.join(new_chars)
+        out.append(prefix + new_value + '"')
+        i = end + 1  # resume right after the def-closing quote (the rest of the tag stays intact)
     return ''.join(out), fixed
 
 
 def main():
-    files = sys.argv[1:] or list(Path('source').glob('3.*.md'))
+    files = sys.argv[1:] or list(Path('source').glob('*.md'))
     total = 0
     for f in files:
         f = Path(f)
