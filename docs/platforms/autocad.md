@@ -55,8 +55,9 @@ timeline
     title AutoCAD API 演进 1982-2027
     1982 : AutoCAD 1.0 发布
          : AutoLISP 嵌入式脚本
-    1995 : R13 引入 ObjectARX
-         : C++ 原生扩展架构
+    1995 : R13 引入 ARX 扩展架构
+         : C++ 原生 in-process
+    1997 : R14 改名为 ObjectARX
     1999 : AutoCAD 2000 多文档
          : Visual LISP IDE 集成
     2006 : Managed .NET API
@@ -150,7 +151,7 @@ graph TB
     L3["第 4 层 · COM Automation<br/>VBA / VB.NET / Python"]
     L4["第 3 层 · Managed .NET API（2006+）<br/>AcMgd / AcDbMgd / AcCoreMgd"]
     L5["第 2 层 · ObjectDBX（.dbx）<br/>仅数据库扩展，无 UI"]
-    L6["第 1 层 · ObjectARX（R13+, 1995）<br/>C++ 原生 API，进程内"]
+    L6["第 1 层 · ObjectARX（ARX@R13 1995, 改名@R14 1997）<br/>C++ 原生 API，进程内"]
     CORE[("AutoCAD Core (C++)<br/>DWG 文件格式")]
     L1 --> L2 --> L3 --> L4 --> L5 --> L6 --> CORE
     classDef web fill:#e3f2fd,stroke:#1976d2,color:#222

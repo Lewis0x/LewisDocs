@@ -52,14 +52,14 @@
 
 ## 3. 待修：4 个真 404 + 2 个表述微调
 
-### 3.1 真 404 链接（必修）
+### 3.1 真 404 链接（已处理）
 
-| 文件 | 引用 | URL | 处理建议 |
+| 文件 | 引用 | 原 URL | 处置 |
 |---|---|---|---|
-| 3.5 MicroStation | `[官方 16]` | `https://www.bimsdks.com/bentley/MicroStationAPI/ElementHandle_8h_source.html` | bimsdks.com 整站不再维护；改指向 [官方 Help](https://help.bentley.com/) 中等价页面或删 URL 改成纯文字注 |
-| 3.6 SolidWorks | `[官方 5]` | `https://www.solidworks.com/product/whats-new` | timeout 反复发生，疑似 SolidWorks 移动了页面；查找新地址 |
-| 3.6 SolidWorks | `[官方 7]` | `https://files.solidworks.com/Supportfiles/Whats_new/2026/English/whatsnew.pdf` | timeout；PDF 可能已撤；查找当前最新版 |
-| 3.6 SolidWorks | `[新闻 13]` | `https://trimech.com/top-10-features-in-solidworks-2026/` | 403；UA 阻挡或移到付费墙；保留 URL 但加注"如失效见 archive.org 镜像" |
+| 3.5 MicroStation | `[官方 16]` | `https://www.bimsdks.com/bentley/MicroStationAPI/ElementHandle_8h_source.html` | ✅ 删 URL 改纯文字注：等价头文件随 MicroStationAPI SDK 安装包分发（`<SDK>\include\Mstn\MstnPlatform\ElementHandle.h`） |
+| 3.6 SolidWorks | `[官方 5]` | `https://www.solidworks.com/product/whats-new` | ✅ 保留 URL + 加注：站方常间歇性 timeout / 重定向，备用入口为 solidworks.com 主导航或 archive 镜像 |
+| 3.6 SolidWorks | `[官方 7]` | `https://files.solidworks.com/Supportfiles/Whats_new/2026/English/whatsnew.pdf` | ✅ 保留 URL + 加注：files.solidworks.com 路径年度切换，从 SolidWorks Customer Portal 取最新 |
+| 3.6 SolidWorks | `[新闻 13]` | `https://trimech.com/top-10-features-in-solidworks-2026/` | ✅ 保留 URL + 加注：UA 阻挡导致 403，浏览器手开正常；失效改 web.archive.org 取镜像 |
 
 ### 3.2 表述微调（推荐，非必须）
 
@@ -136,7 +136,8 @@ CSV 设计为可在 Excel 打开打 verified 列做完整 trace。
 - ✅ `scripts/audit_citations.py` —— 可重复执行的审计工具
 - ✅ `audit_report.csv` / `audit_report.md` —— 审计运行时产物（不进 git）
 - ✅ 本文档 `project-docs/06-citation-audit.md` —— 永久审计纪要
-- ⏳ 4 个真 404 待修（见 §3.1）
-- ⏳ 2 处可微调表述（见 §3.2）
+- ✅ 4 个真 404 已修（见 §3.1）—— 1 个删 URL 改纯文字，3 个保留 URL + 加可访问性注释
+- ✅ 论断 #1 (R13/ARX naming) 已修：§1.2 正文澄清 + 时间线 + 层级图标签同步更新
+- ✅ 论断 #12 (iTwin.js 许可证) 已修：核心仓 MIT + imodeljs-native 双许可的全貌已澄清
 
-待修内容会在下一次专门的"事实精修"提交里处理；本次提交是建立审计基础设施。
+后续：方法论 §05 的"实施记录"会在 8 篇文档全部完成 T2 注释后补总。

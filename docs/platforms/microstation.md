@@ -40,7 +40,7 @@ title: Bentley MicroStation + iTwin API 设计深度剖析
 
 1. **MDL（MicroStation Development Language）的引入年份在公开资料中存在分歧**：Wikipedia 与多数社区资料表述为 1992 年的 V4 release<sup><a href="https://en.wikipedia.org/wiki/MicroStation" target="_blank" rel="noreferrer">[百科 1]</a></sup>；Sumbera 的历史教程表述为 1991 年<sup><a href="http://www.sumbera.com/ustation/tutorial/mdlevolution.htm" target="_blank" rel="noreferrer">[第三方 2]</a></sup>；LA Solutions 表述为"MDL has been available since 1993"<sup><a href="https://www.la-solutions.org/CONNECT/MicroStation-CONNECT.htm" target="_blank" rel="noreferrer">[第三方 14]</a></sup>。本报告采用"V4 系列（1990 年代初期）"的稳妥表述。
 2. **从 V8 起 MDL 实质成为 C 库**：MDL 不再作为独立语言存在，而是一组 C 语言函数族，可编译为 Windows DLL 并在 Visual Studio 中调试<sup><a href="http://www.sumbera.com/ustation/tutorial/mdlevolution.htm" target="_blank" rel="noreferrer">[第三方 2]</a></sup>。<Term def="平台无关字节码（pseudo-code）：编译后的中间产物，由专属解释器（VM）跑，跟 Java .class / Python .pyc 同思路。早期 MDL 编译为 .ma p-code，跨 OS 跑同一份。Java 1995 年才出来，MDL 1992 就用了相似方案。">p-code</Term> .ma 路径仅作 legacy 兼容。
-3. **MicroStationAPI（C++ 原生）的 ElementHandle / EditElementHandle 双 Handle 模式**：⚠️ 关键纠正——`EditElementHandle` 是 `ElementHandle` 的**派生类**，而非两个独立的姊妹类<sup><a href="https://www.la-solutions.org/CONNECT/MicroStationAPI/MicroStationAPI-CellHandlers.htm" target="_blank" rel="noreferrer">[第三方 15]</a><a href="https://www.bimsdks.com/bentley/MicroStationAPI/ElementHandle_8h_source.html" target="_blank" rel="noreferrer">[官方 16]</a></sup>。`ElementHandle` 是只读基类，`EditElementHandle` 增加了写能力。
+3. **MicroStationAPI（C++ 原生）的 ElementHandle / EditElementHandle 双 Handle 模式**：⚠️ 关键纠正——`EditElementHandle` 是 `ElementHandle` 的**派生类**，而非两个独立的姊妹类<sup><a href="https://www.la-solutions.org/CONNECT/MicroStationAPI/MicroStationAPI-CellHandlers.htm" target="_blank" rel="noreferrer">[第三方 15]</a>[官方 16]</sup>。`ElementHandle` 是只读基类，`EditElementHandle` 增加了写能力。
 4. **DgnPlatformNET 是托管 .NET 层**：CONNECT Edition 引入 `Bentley.MicroStation.dll`/`Bentley.DgnPlatformNET.dll`/`Bentley.GeometryNET.dll`<sup><a href="https://www.la-solutions.org/CONNECT/MicroStation-CONNECT.htm" target="_blank" rel="noreferrer">[第三方 14]</a></sup>。
 5. **MicroStation 2024 引入官方 Python API**：Python 3.12 嵌入 + Python Manager（Ribbon 工具）<sup>[官方 13][第三方 11]</sup>+ GitHub 开源示例（`BentleySystems/MicroStationPython` 仓库）<sup><a href="https://github.com/BentleySystems/MicroStationPython" target="_blank" rel="noreferrer">[官方 12]</a></sup>。
 6. **DGN 元素的多层扩展元数据**：Linkage（V7 时代二进制小段）→ XAttribute（V8 引入结构化扩展数据）→ Item Types（V8i 引入轻量元数据）→ ECInstance/ECSchema（顶层强类型工程对象）<sup>[官方 17]<a href="https://www.la-solutions.org/CONNECT/MicroStation-CONNECT.htm" target="_blank" rel="noreferrer">[第三方 14]</a></sup>。
@@ -260,9 +260,9 @@ DgnFile
 
 ### 3.2 ElementHandle / EditElementHandle 双 Handle 模式（含勘误）
 
-MicroStationAPI 用一对 handle 类区分只读与可写<sup><a href="https://www.la-solutions.org/CONNECT/MicroStationAPI/MicroStationAPI-CellHandlers.htm" target="_blank" rel="noreferrer">[第三方 15]</a><a href="https://www.bimsdks.com/bentley/MicroStationAPI/ElementHandle_8h_source.html" target="_blank" rel="noreferrer">[官方 16]</a></sup>：
+MicroStationAPI 用一对 handle 类区分只读与可写<sup><a href="https://www.la-solutions.org/CONNECT/MicroStationAPI/MicroStationAPI-CellHandlers.htm" target="_blank" rel="noreferrer">[第三方 15]</a>[官方 16]</sup>：
 
-⚠️ **重要事实澄清**：社区资料中有将 `ElementHandle` 和 `EditElementHandle` 描述为两个独立姊妹类的说法。**实际上 `EditElementHandle` 是 `ElementHandle` 的派生类**——LA Solutions 文档明确表述："The ElementHandle class (and hence the derived EditElementHandle class) has a GetHandler() method"<sup><a href="https://www.la-solutions.org/CONNECT/MicroStationAPI/MicroStationAPI-CellHandlers.htm" target="_blank" rel="noreferrer">[第三方 15]</a></sup>。Bentley API 头文件源码也证实：`EditElementHandle (...) : ElementHandle (descr, owned, isUnmodified, modelRef) {}`<sup><a href="https://www.bimsdks.com/bentley/MicroStationAPI/ElementHandle_8h_source.html" target="_blank" rel="noreferrer">[官方 16]</a></sup>。
+⚠️ **重要事实澄清**：社区资料中有将 `ElementHandle` 和 `EditElementHandle` 描述为两个独立姊妹类的说法。**实际上 `EditElementHandle` 是 `ElementHandle` 的派生类**——LA Solutions 文档明确表述："The ElementHandle class (and hence the derived EditElementHandle class) has a GetHandler() method"<sup><a href="https://www.la-solutions.org/CONNECT/MicroStationAPI/MicroStationAPI-CellHandlers.htm" target="_blank" rel="noreferrer">[第三方 15]</a></sup>。Bentley API 头文件源码也证实：`EditElementHandle (...) : ElementHandle (descr, owned, isUnmodified, modelRef) {}`<sup>[官方 16]</sup>。
 
 ```cpp
 // 只读：用于查询、显示、不修改
@@ -282,7 +282,7 @@ eeh.ReplaceInModel(eeh.GetElemRef());
 2. **Persistent and modified**：`GetElementRef` 返回 NULL，`IsPersistent` 返回 false（即使 descriptor 的 elementRef 字段已设置）
 3. **Non-persistent**：仅持有 element descriptor
 
-辅助类 `ChildElemIter` / `ChildEditElemIter` 用于迭代复杂元素的子元素<sup><a href="https://www.bimsdks.com/bentley/MicroStationAPI/ElementHandle_8h_source.html" target="_blank" rel="noreferrer">[官方 16]</a></sup>。
+辅助类 `ChildElemIter` / `ChildEditElemIter` 用于迭代复杂元素的子元素<sup>[官方 16]</sup>。
 
 > **[推论]** `EditElementHandle` 作为 `ElementHandle` 派生类的设计选择，使得"只读 API"可以无缝接受可写句柄作为参数（通过基类指针）——这是典型的 LSP（里氏替换原则）应用。但这种"is-a 关系"也意味着开发者需要谨慎检查是否处理可写状态。
 
@@ -702,7 +702,7 @@ iTwin.js 完全开源（MIT License）<sup><a href="https://www.businesswire.com
 - [官方 10] iTwin.js Change History (5.x), https://www.itwinjs.org/changehistory/
 - [官方 12] BentleySystems/MicroStationPython GitHub Repository, https://github.com/BentleySystems/MicroStationPython
 - [官方 13] Bentley Help, "New and Changed in MicroStation 2024", docs.bentley.com（含 Python Manager 介绍）
-- [官方 16] Bentley API Headers, ElementHandle.h Source, https://www.bimsdks.com/bentley/MicroStationAPI/ElementHandle_8h_source.html
+- [官方 16] Bentley API Headers, ElementHandle.h Source（原 bimsdks.com 镜像已失效，等价头文件随 Bentley MicroStationAPI SDK 安装包分发，路径形如 `<SDK>\include\Mstn\MstnPlatform\ElementHandle.h`）
 - [官方 17] Bentley, "MicroStationPython Structure of DGN File" PDF（含 ECInstance/Schema 介绍）
 - [官方 18] iTwin.js, "ECSchema" Documentation, https://www.itwinjs.org/bis/ec/ec-schema/
 - [官方 19] iTwin.js Architecture Documentation, https://www.itwinjs.org/learning/
