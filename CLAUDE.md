@@ -33,6 +33,38 @@ When working in `D:\Work\LewisDocs\`, you always have direct `git push` to
 
 ---
 
+## Annotation Tiers (when to add term annotations to prose)
+
+Site is read by **managers and decision-makers**, not only same-domain CAD architects.
+Annotate jargon that a CTO would need explained — but don't over-annotate. Decision tree:
+
+```
+Is it a brand/product name (Cloudflare Pages, Mermaid, VitePress)? → T4, skip
+Is it CAD-specific (B-Rep, Parasolid, FeatureScript, TNP)?         → T1: glossary entry +
+                                                                     <Term def="…"> or [link]
+Is it a universal abbreviation (API, SDK, IDE, CI)?                → T3: glossary 缩写表 only,
+                                                                     don't mark inline
+Would a non-software-bg decision-maker need it explained?          → T2: inline
+                                                                     <Term def="一句中文">
+                                                                     (graduate to glossary at 3+ uses)
+Otherwise                                                          → don't mark
+```
+
+**Density rules:**
+- First mention per chapter only (not per page or paragraph)
+- Skip code blocks, headings, table headers, `<sup>[百科 N]</sup>`, `[回链：...]`, mermaid nodes
+- Max 2 annotations per paragraph
+
+**Definition writing style:**
+- 1-2 sentences, 30-80 Chinese chars, "**是什么 + 关键特征**"
+- Don't reference other sections (avoid nested links in tooltips)
+- Don't write English-only definitions
+
+Run `python scripts/find_jargon.py` to discover unannotated jargon candidates.
+Full methodology: `project-docs/05-annotation-methodology.md`.
+
+---
+
 ## Source-of-Truth Map
 
 | Type | Path | When you edit |

@@ -22,10 +22,10 @@ title: AutoCAD ObjectARX API 设计深度剖析
 
 ## TL;DR
 
-- **ObjectARX 是 AutoCAD 的 in-process 原生 C++ SDK**<sup><a href="https://en.wikipedia.org/wiki/ObjectARX" target="_blank" rel="noreferrer">[百科 1]</a></sup>，扩展模块编译为 `.arx` / `.dbx`（实质是 Windows DLL，文件扩展名不同），加载到 AutoCAD 进程内，可直接访问 AutoCAD 内部 C++ 类<sup><a href="https://en.wikipedia.org/wiki/ObjectARX" target="_blank" rel="noreferrer">[百科 1]</a></sup>。在 AutoCAD API 体系的层级中，ObjectARX 处于最底层位置，能力最深，学习与维护成本也较高。
-- **API 体系是六层金字塔**：从底层向上依次为 ObjectARX (C++) → ObjectDBX (.dbx 仅数据库) → Managed .NET API (AcMgd / AcDbMgd / AcCoreMgd) → COM Automation → AutoLISP / Visual LISP → JavaScript API（Web）。每一层针对不同开发者群体，但下层 API 是上层的实现基础。
+- **ObjectARX 是 AutoCAD 的 <Term def="扩展模块加载到主程序进程内运行（与 out-of-process 通过 IPC 通信相对）。性能高、可直接访问内部对象，但崩溃会拖垮主程序。">in-process</Term> 原生 C++ SDK**<sup><a href="https://en.wikipedia.org/wiki/ObjectARX" target="_blank" rel="noreferrer">[百科 1]</a></sup>，扩展模块编译为 `.arx` / `.dbx`（实质是 Windows DLL，文件扩展名不同），加载到 AutoCAD 进程内，可直接访问 AutoCAD 内部 C++ 类<sup><a href="https://en.wikipedia.org/wiki/ObjectARX" target="_blank" rel="noreferrer">[百科 1]</a></sup>。在 AutoCAD API 体系的层级中，ObjectARX 处于最底层位置，能力最深，学习与维护成本也较高。
+- **API 体系是六层金字塔**：从底层向上依次为 ObjectARX (C++) → <Term def="AutoCAD 仅数据库的扩展模块格式 .dbx：能注册自定义对象但无 UI 与命令，常用于 Object Enabler 场景。">ObjectDBX</Term> (.dbx 仅数据库) → <Term def="Microsoft .NET Framework 的托管运行时（CLR）层。AutoCAD 2006 起把 ObjectARX 包成 .NET 类，让 C# / VB.NET 也能扩展。">Managed .NET API</Term> (AcMgd / AcDbMgd / AcCoreMgd) → <Term def="基于 Microsoft COM 的'用脚本调外部程序'机制。VBA / VB.NET / Python (pywin32) 都通过它访问 AutoCAD 对象。">COM Automation</Term> → AutoLISP / Visual LISP → JavaScript API（Web）。每一层针对不同开发者群体，但下层 API 是上层的实现基础。
 - **ObjectARX 与 AutoCAD 内核高度耦合**<sup><a href="https://en.wikipedia.org/wiki/ObjectARX" target="_blank" rel="noreferrer">[百科 1]</a></sup>：库版本与编译器版本紧密绑定，开发者需要使用 Autodesk 编译 AutoCAD 所用的同版本 Visual Studio。这是"性能与扩展深度"换"工具链刚性"的典型设计。
-- **二进制兼容（ABI）矩阵 2025–2027 的实际现状**：⚠️ AutoCAD 2025 + 2026 共享 VS2022 + .NET 8.0 LTS（**二进制兼容**，无需重编译）<sup><a href="https://aps.autodesk.com/developer/overview/objectarx-autocad-sdk" target="_blank" rel="noreferrer">[官方 2]</a>[第三方 3]</sup>；AutoCAD 2027 是新的破坏性断点，需要 VS2026 (v18.0, toolset v145) + .NET 10.0<sup>[第三方 3]</sup>。这与社区流传的"每三年破坏一次"叙事不完全一致——实际是"两年共享 LTS + 一年破坏" 的节奏。
+- **二进制兼容（<Term def="Application Binary Interface，二进制接口契约。与 API（源码级）不同，ABI 规定编译产物之间如何调用——函数符号修饰、寄存器约定、内存布局等。ABI 不兼容意味着旧 .dll 在新版上运行会崩溃。">ABI</Term>）矩阵 2025–2027 的实际现状**：⚠️ AutoCAD 2025 + 2026 共享 VS2022 + .NET 8.0 LTS（**二进制兼容**，无需重编译）<sup><a href="https://aps.autodesk.com/developer/overview/objectarx-autocad-sdk" target="_blank" rel="noreferrer">[官方 2]</a>[第三方 3]</sup>；AutoCAD 2027 是新的破坏性断点，需要 VS2026 (v18.0, toolset v145) + .NET 10.0<sup>[第三方 3]</sup>。这与社区流传的"每三年破坏一次"叙事不完全一致——实际是"两年共享 LTS + 一年破坏" 的节奏。
 - **DWG 是 AutoCAD 的核心资产**：1982 年发布<sup><a href="https://en.wikipedia.org/wiki/AutoCAD" target="_blank" rel="noreferrer">[百科 4]</a></sup>，至今仍是 CAD 文件格式中较广泛使用的格式之一。DWG 的封闭性曾受到激烈挑战（Open Design Alliance 即原 OpenDWG Alliance）<sup><a href="https://en.wikipedia.org/wiki/Open_Design_Alliance" target="_blank" rel="noreferrer">[百科 5]</a></sup>，但 Autodesk 仍持续主导其演进。
 - **2022 年 12 月 7 日 Forge 改名为 Autodesk Platform Services (APS)**<sup>[官方 6]</sup>：这是 Autodesk 云战略品牌升级的关键节点。
 - **AutoCAD 2026 全面拥抱 Autodesk AI**<sup><a href="https://www.autodesk.com/blogs/autocad/autocad-2026/" target="_blank" rel="noreferrer">[新闻 7]</a><a href="https://www.autodesk.com/products/autocad/features" target="_blank" rel="noreferrer">[官方 8]</a></sup>：Smart Blocks（Search/Detect and Convert）+ Activity Insights "What's Changed" + Autodesk Assistant 应用内 AI 助手 + Connected Support Files + 文件打开速度声称 11x 提升。
@@ -36,15 +36,15 @@ title: AutoCAD ObjectARX API 设计深度剖析
 ## Key Findings
 
 1. **ObjectARX 命名来源**：AutoCAD Runtime eXtension<sup><a href="https://en.wikipedia.org/wiki/ObjectARX" target="_blank" rel="noreferrer">[百科 1]</a></sup>。
-2. **`.arx` 与 `.dbx` 区别**：`.arx` 是完整应用模块（可注册命令、UI），`.dbx` 是仅数据库扩展模块（注册自定义对象，但无 UI 与命令）<sup><a href="https://en.wikipedia.org/wiki/ObjectARX" target="_blank" rel="noreferrer">[百科 1]</a></sup>。后者用于 Object Enabler 场景——让对象在 AutoCAD LT 或不安装垂直产品的环境中也能被读取显示。
+2. **`.arx` 与 `.dbx` 区别**：`.arx` 是完整应用模块（可注册命令、UI），`.dbx` 是仅数据库扩展模块（注册自定义对象，但无 UI 与命令）<sup><a href="https://en.wikipedia.org/wiki/ObjectARX" target="_blank" rel="noreferrer">[百科 1]</a></sup>。后者用于 <Term def="AutoCAD 让没装某 ARX 应用的环境也能正确显示其自定义对象的机制：通过 .dbx 模块单独分发对象定义，主 ARX 不需要在场。">Object Enabler</Term> 场景——让对象在 AutoCAD LT 或不安装垂直产品的环境中也能被读取显示。
 3. **托管 .NET API 的三大程序集**：`AcMgd.dll`（应用层）、`AcDbMgd.dll`（数据库层）、`AcCoreMgd.dll`（核心层）<sup><a href="https://www.cadtrainingonline.com/introduction-to-autocad-net-api-basics/" target="_blank" rel="noreferrer">[第三方 9]</a></sup>。
 4. **AutoCAD 2026 ObjectARX SDK 的工具链要求**：Microsoft Visual Studio 2022 version 17.14.0 + .NET 8.0（含 C++ option）<sup><a href="https://aps.autodesk.com/developer/overview/objectarx-autocad-sdk" target="_blank" rel="noreferrer">[官方 2]</a></sup>。
 5. **AutoCAD 2027 的工具链断裂**：⚠️ 托管应用需要 target .NET 10.0；C++ 部分仍可用 VS2022 v17.14（MSVC toolset 14.44），但 .NET 需要使用 **VS2026 (v18.0, toolset v145)**<sup>[第三方 3]</sup>。这是"非全断裂、半断裂"的微妙节奏。
 6. **AcDbDatabase = 内存中的 DWG**：每个打开的图纸对应一个 `AcDbDatabase`，所有持久化对象（Entity、Layer、Linetype、Block 等）都存于其中。
-7. **ObjectId 的双重身份**：ObjectId 在内存中是 64 位指针的语义包装，但持久化到 DWG 时编码为 handle（一个 16 进制字符串）<sup><a href="https://help.autodesk.com/view/OARX/2026/ENU/" target="_blank" rel="noreferrer">[官方 10]</a></sup>。这是 AutoCAD 数据库的关键抽象。
-8. **Transaction 模式**（`AcTransactionManager`）：在 ObjectARX 早期是手动管理 `acdbOpenObject` / `close` 的，2000+ 引入 Transaction 模式使代码更安全<sup><a href="https://help.autodesk.com/view/OARX/2026/ENU/" target="_blank" rel="noreferrer">[官方 10]</a></sup>。.NET API 中是 `Database.TransactionManager.StartTransaction()` 配合 `using` 块的标准模式。
+7. **ObjectId 的双重身份**：ObjectId 在内存中是 64 位指针的语义包装，但持久化到 DWG 时编码为 <Term def="数据库对象的稳定字符串标识。AutoCAD 中是十六进制串；进程重启后内存指针失效但 handle 仍能定位同一对象，是跨会话引用的根。">handle</Term>（一个 16 进制字符串）<sup><a href="https://help.autodesk.com/view/OARX/2026/ENU/" target="_blank" rel="noreferrer">[官方 10]</a></sup>。这是 AutoCAD 数据库的关键抽象。
+8. **<Term def="用 begin / commit 包裹一组数据库操作的模式：失败可整体回滚，避免半提交脏状态。AutoCAD 2000+ 引入；.NET API 配合 using 块自动 commit / abort，是当代推荐写法。">Transaction 模式</Term>**（`AcTransactionManager`）：在 ObjectARX 早期是手动管理 `acdbOpenObject` / `close` 的，2000+ 引入 Transaction 模式使代码更安全<sup><a href="https://help.autodesk.com/view/OARX/2026/ENU/" target="_blank" rel="noreferrer">[官方 10]</a></sup>。.NET API 中是 `Database.TransactionManager.StartTransaction()` 配合 `using` 块的标准模式。
 9. **Custom Entity（自定义图元）**：通过派生 `AcDbEntity` + 实现 `subWorldDraw` / `subTransformBy` / `subGetGeomExtents` 等虚方法实现<sup><a href="https://help.autodesk.com/view/OARX/2026/ENU/" target="_blank" rel="noreferrer">[官方 10]</a></sup>。Object Enabler 机制让 Custom Entity 可在不安装定义 DLL 的环境中显示（通过 proxy）。
-10. **AutoCAD 2027 是 SDK 的下一个断点**：clean rebuild 必需<sup>[第三方 3]</sup>，Linker library suffix 从 25/26 改为 27。
+10. **AutoCAD 2027 是 SDK 的下一个断点**：<Term def="清空缓存与产物目录后从头构建。常用于排除 stale build artifact 引发的莫名错误，或在工具链断点时强制重新链接。">clean rebuild</Term> 必需<sup>[第三方 3]</sup>，Linker library suffix 从 25/26 改为 27。
 
 ---
 
@@ -325,7 +325,7 @@ public:
 
 ### 4.4 Reactor / Event 机制
 
-ObjectARX 的事件模型称为 **Reactor**<sup><a href="https://help.autodesk.com/view/OARX/2026/ENU/" target="_blank" rel="noreferrer">[官方 10]</a></sup>：
+ObjectARX 的事件模型称为 **<Term def="AutoCAD 实现观察者模式（Observer pattern）的具体名称：通过派生 AcDbDatabaseReactor / AcEditorReactor 等基类，对数据库 / 编辑器 / 文档事件做回调。">Reactor</Term>**<sup><a href="https://help.autodesk.com/view/OARX/2026/ENU/" target="_blank" rel="noreferrer">[官方 10]</a></sup>：
 
 ```cpp
 class MyDatabaseReactor : public AcDbDatabaseReactor

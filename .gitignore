@@ -7,3 +7,7 @@ __pycache__
 *.pyc
 *.log
 .DS_Store
+
+# 工具临时输出
+jargon-report.md
+.preview-screenshots/
