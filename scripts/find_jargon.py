@@ -90,7 +90,41 @@ T4_BRANDS = {
     'DgnPlatform', 'DgnFile', 'DgnModel', 'DgnAttachment', 'DgnElement', 'DgnGeometry',
     'DgnPlatformNET', 'GeometryNET',
     # FeatureScript / Onshape
-    'PartStudio', 'Glassworks', 'OnPy',
+    'PartStudio', 'Glassworks', 'OnPy', 'Atlas',
+    # Onshape / CAD feature 名（产品功能，不属于 jargon）
+    'Extrude', 'Fillet', 'Helix', 'Loft', 'Sweep', 'Revolve', 'Chamfer',
+    'Mirror', 'Pattern', 'Shell', 'Hole', 'Thread', 'Boss', 'Cut',
+    'Sketch', 'Dimension', 'Constraint',
+    'Document', 'Workspace', 'Version', 'Element',  # Onshape 4 层 — 大写，专有
+    # Onshape AI / 产品功能子项
+    'Advisor', 'Render', 'Rendering', 'Cosmetic', 'Threads', 'Routing', 'Curves',
+    'Constrained', 'Surfaces', 'Sheet', 'Metal', 'Forms',
+    # AutoCAD 功能名 / 类前缀
+    'Smart', 'Blocks', 'Activity', 'Insights', 'Autodesk', 'Convert',
+    'BlockTable', 'BlockTableRecord', 'LayerTable', 'TextStyleTable',
+    'DimStyleTable', 'NamedObjectsDictionary', 'AcDbObjectId',
+    # MicroStation 类前缀
+    'XAttribute', 'XAttributes', 'Linkage', 'ItemType', 'ItemTypes',
+    'ECInstance', 'ECRelationshipClass', 'ECStructProperty', 'ECNavigationProperty',
+    'CustomAttribute', 'EditElementHandle', 'ElementHandle', 'CurveVector',
+    'SmartSolid', 'DgnDbConnection', 'DgnElement', 'DgnHandler',
+    # FreeCAD 类前缀
+    'TopoShape', 'ElementMap', 'PropertyContainer', 'DocumentObject',
+    'FeaturePython', 'ViewProvider', 'Coin3D', 'Inventor',
+    # NX 类前缀
+    'NXOpen', 'BlockUI', 'Builder', 'Adaptive', 'Persistent',
+    # 通用文件 / 模块名
+    'std', 'main', 'master', 'develop', 'staging', 'prod',
+    # 单字母大写（章节标记 / 选项）
+    'A', 'B', 'C', 'D', 'E', 'F', 'G',
+    # 行业地区 / 缩写补充
+    'AEC', 'OEM', 'SaaS', 'PaaS', 'FaaS',
+    # T4 加：品牌 / 产品功能子词
+    'Explorer', 'Store', 'Developer', 'Documentation',
+    'README', 'CHANGELOG', 'LICENSE', 'CONTRIBUTING',
+    # AI 功能 / 命名碎片
+    'Advisor', 'Render', 'Rendering', 'Assistant', 'Render',
+    # 其他
     # SketchUp
     'Sketchup', 'HtmlDialog',
     # Mermaid 图节点常见
@@ -181,6 +215,12 @@ COMMON_WORDS = {
     # 引用类别（已在缩写表 / 自定义渲染）
     '类别', 'kind', 'category', 'see', 'also', 'detail', 'details',
     'eg', 'ie', 'etc',
+    # 通用形容词 / 名词扩充
+    'ID', 'IDs', 'undo', 'redo', 'custom', 'definition', 'definitions',
+    'parametric', 'Parametric', 'selection', 'Selection',
+    'agent', 'agents', 'autocomplete', 'cloud', 'clouds', 'quick',
+    'meshes', 'point', 'powered', 'enabled', 'powered-by',
+    'commit', 'commits', 'branch', 'branches', 'tag', 'tags',  # 已在 Onshape 注释里讲过；其他文档不必重复
 }
 
 
@@ -286,9 +326,11 @@ def extract_phrases(line: str) -> list[str]:
     if not tokens:
         return []
     out = list(tokens)
-    # 二元相邻短语
+    # 二元相邻短语（dedupe 同 token 重复，如 "microversion microversion"）
     for i in range(len(tokens) - 1):
         a, b = tokens[i], tokens[i + 1]
+        if a == b:
+            continue  # 跳重复
         if (
             len(a) >= 3 and len(b) >= 3
             and a.lower() not in COMMON_WORDS

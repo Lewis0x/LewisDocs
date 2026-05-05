@@ -2,17 +2,20 @@ import { h } from 'vue'
 import DefaultTheme from 'vitepress/theme'
 import type { Theme } from 'vitepress'
 import Honeypot from './components/Honeypot.vue'
+import OutlineToggle from './components/OutlineToggle.vue'
 import Term from './components/Term.vue'
 import './custom.css'
 
 const theme: Theme = {
   extends: DefaultTheme,
-  // 通过 layout-bottom slot 在每个页面 DOM 树底部插入蜜罐链接：
-  //   - 守规矩的爬虫读 robots.txt → 避开 /_honeypot/ → 不被惩罚
-  //   - 不读 robots.txt 的爬虫跟 DOM 链接 → 触发 Cloudflare WAF → 进 IP 黑名单
-  //   - 真人用户：定位屏外 + aria-hidden + tabindex=-1，无感
+  // - layout-bottom slot：蜜罐链接（每页都挂）
+  //   * 守规矩的爬虫读 robots.txt → 避开 /_honeypot/
+  //   * 不读 robots.txt 的爬虫跟 DOM 链接 → 触发 Cloudflare WAF
+  //   * 真人用户：定位屏外 + aria-hidden + tabindex=-1，无感
+  // - layout-top slot：右上角"折叠本页大纲"按钮，状态写 localStorage
   Layout() {
     return h(DefaultTheme.Layout, null, {
+      'layout-top': () => h(OutlineToggle),
       'layout-bottom': () => h(Honeypot),
     })
   },

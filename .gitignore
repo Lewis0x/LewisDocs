@@ -10,4 +10,7 @@ __pycache__
 
 # 工具临时输出
 jargon-report.md
+audit_report.csv
+audit_report.md
+lewisdocs_*.html
 .preview-screenshots/

@@ -64,3 +64,19 @@
 .mermaid-diagram .eventNode text {
   font-family: var(--vp-font-family-base);
 }
+
+/* ---------------------------------------------------------------------------
+ * "本页大纲" 折叠 / 展开
+ * 由 docs/.vitepress/theme/components/OutlineToggle.vue 切换 body class。
+ * 折叠态：隐藏右侧 outline 内容；保留 aside 容器避免布局抖动。
+ * --------------------------------------------------------------------------- */
+body.outline-collapsed .VPDocAsideOutline,
+body.outline-collapsed .VPDocAside .spacer,
+body.outline-collapsed .VPDocAside .toggle-button {
+  display: none !important;
+}
+
+/* 给右上角折叠按钮预留空间，避免遮挡 outline 第一行 */
+.VPDocAsideOutline {
+  padding-right: 32px;
+}
