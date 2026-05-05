@@ -210,6 +210,34 @@ V1 第一次试点（2026-05-05）：
 2. **首次出现的位置选择**：TL;DR / Key Findings / 章节首段 三选一。优先 Key Findings（最容易被读者顺序读到，hover 一次后续不再标）。
 3. **避免与 T1 已有概念重复**：3.5 MicroStation 跑出 ECObjects / ECSchema 等候选，但这些在 glossary 已有条目，应直接用 `[link]` 而非新加 `<Term>`。
 
+### 9.4 T2 → T1 季度审视（首次执行）
+
+8 篇厂商文档全部 T2 注释完成后，跑全量 `find_jargon.py --top 40 --min-count 3` 看哪些 T2 术语在 ≥ 2 篇文档出现，应升级为 T1 进 glossary。
+
+**升级 4 个**（满足 §5 的"≥ 2 篇文档 + 总频次 ≥ 10"门槛）：
+
+| 术语 | 总频次 | 文档数 | 处理 |
+|---|---:|---:|---|
+| `in-process` | 18 | 5 | 新增 glossary 条目；3.1 AutoCAD 的原 `<Term def>` 改为 `[link](/glossary#in-process)` |
+| `Observer` | 13 | 5 | 新增 glossary 条目（含全平台对应名 Reactor/CallBack/Subscriber 列举）；3.7 SketchUp 的原 `<Term def>` 改为 `[link]` |
+| `ODA (Open Design Alliance)` | 21 | 5 | 新增 glossary 条目（DWG 词条已经提及但未独立条目，本次独立成节） |
+| `GRIP` | 15 | 3 | 新增 glossary 条目（NX 1980s 遗产语言，作为"CAD 各搞自家脚本"案例） |
+
+**未升级**（候选但被否决）：
+- `DS / NET / COM / Wikipedia / Software / Manager / Property / Framework / Late / Authorized / Internal / Spec / Engineering / Coach / mark` —— 要么是品牌（DS Wikipedia）/通用缩写（NET COM）/单字母拆分（Late Type 的 Late 单独无意义）/泛化词（Manager Software）。
+- `App/Gui` (12)、`Spec/Result/Update` (10) —— 只在 1-2 篇文档出现核心讨论，强 CAD 厂商专属，留作 T2 即可。
+- `FD` (16)、`Warehouse` (13)、`PartDesign` (11)、`I-DEAS` (11)、`RealThunder` (11) —— 都集中在单一文档，不满足"≥ 2 篇"。
+
+**链接修正过程的踩坑：**
+- glossary 条目顶端"深入：…"必须使用真实存在的 anchor，否则构建后会产生 broken link
+- 实操：先写好条目内容（包含猜测的 anchor）→ 跑构建 → 查 dist/ HTML 中实际 id → 改正 anchor。这个流程比"写时记忆 anchor"可靠得多
+- 有 4 处初始猜测的 anchor 全部错（`一、历史演进-从-uniapt-2406` 实际是 `一、历史演进-从-uniapt-1972-到-nx-x-2024`）。建议**未来加 glossary 条目时，先 grep `dist/<page>.html` 确认 anchor 再写**
+
+**升级后的 dist 校验：**
+- 0 broken anchors（含 glossary "深入" 链接）
+- Term wrappers 从 59 减为 57（少了 2 = in-process + Observer 的转换）
+- 4 个新 glossary 条目（GRIP/in-process/ODA/Observer）的 anchor 全部可达
+
 ---
 
 ## 10. 不做
