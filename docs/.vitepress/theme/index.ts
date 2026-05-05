@@ -2,6 +2,7 @@ import { h } from 'vue'
 import DefaultTheme from 'vitepress/theme'
 import type { Theme } from 'vitepress'
 import Honeypot from './components/Honeypot.vue'
+import Term from './components/Term.vue'
 import './custom.css'
 
 const theme: Theme = {
@@ -14,6 +15,10 @@ const theme: Theme = {
     return h(DefaultTheme.Layout, null, {
       'layout-bottom': () => h(Honeypot),
     })
+  },
+  enhanceApp({ app }) {
+    // 全局组件：所有 .md 文件中可直接 `<Term def="...">B-Rep</Term>`
+    app.component('Term', Term)
   },
 }
 

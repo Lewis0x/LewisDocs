@@ -85,6 +85,7 @@ export default withMermaid({
           { text: 'FreeCAD', link: '/platforms/freecad' },
         ],
       },
+      { text: '术语表', link: '/glossary' },
     ],
 
     sidebar: [
@@ -108,6 +109,12 @@ export default withMermaid({
           { text: '3.6 SolidWorks', link: '/platforms/solidworks' },
           { text: '3.7 SketchUp Ruby', link: '/platforms/sketchup' },
           { text: '3.8 FreeCAD', link: '/platforms/freecad' },
+        ],
+      },
+      {
+        text: '工具',
+        items: [
+          { text: '术语表（Glossary）', link: '/glossary' },
         ],
       },
     ],
