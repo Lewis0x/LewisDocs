@@ -1,0 +1,33 @@
+# Cloudflare Pages 边缘响应头配置
+# 文档：https://developers.cloudflare.com/pages/configuration/headers/
+# 这是 *.pages.dev 默认子域上**唯一**可下发的反爬硬控信号——
+# 一旦绑定自定义域名，可以追加 zone 级 WAF 规则（见 project-docs/03-development.md §12）。
+
+# ---------------------------------------------------------------------------
+# 全站默认：所有路径都拒索引 + 反 iframe + 反内嵌
+# ---------------------------------------------------------------------------
+/*
+  X-Robots-Tag: noindex, nofollow, noarchive, nosnippet, noimageindex, nocache
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Permissions-Policy: browsing-topics=(), interest-cohort=()
+  Cross-Origin-Opener-Policy: same-origin
+
+# ---------------------------------------------------------------------------
+# 蜜罐：永不缓存，让命中必达 CF Analytics
+# ---------------------------------------------------------------------------
+/_honeypot/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+  Cache-Control: no-store, no-cache, must-revalidate
+  Pragma: no-cache
+
+# ---------------------------------------------------------------------------
+# 政策文件：短缓存（5 分钟），改 robots/ai 后能快速生效
+# ---------------------------------------------------------------------------
+/robots.txt
+  Cache-Control: public, max-age=300
+/ai.txt
+  Cache-Control: public, max-age=300
+/LICENSE
+  Cache-Control: public, max-age=300

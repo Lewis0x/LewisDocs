@@ -375,51 +375,87 @@ ci(gitlab): 修复 alpine 镜像 Python 路径
 
 防御层布局见 [02-design.md ADR-009](./02-design.md)。本节是**操作手册**。
 
-### 12.1 首次部署：Cloudflare 面板手工配置（一次性）
+### 12.1 当前部署形态（`*.pages.dev` 子域）能用的边缘控制
 
-部署成功后，到 Cloudflare Dashboard → Pages → LewisDocs 项目，按以下顺序点：
+⚠️ **关键事实**：Cloudflare WAF Custom Rules / Bot Fight Mode 自定义 / Rate Limiting 是 **Zone（域名）层级**功能。绑定**自定义域名**之前，`lewisdocs.pages.dev` 项目的 Settings 页里**只有** Variables / Bindings / Runtime / General 四块，没有 Security / WAF / Bots / Rate Limit 入口。
 
-1. **Security › Bots › Bot Fight Mode** → ON（免费版能开的全开）
-2. **Security › WAF › Custom rules** → 新建两条：
+因此**当前架构**下的 L2 边缘控制只有两条：
 
-   规则 #1：屏蔽已知 AI bot UA（兜底，防止有人无视 robots.txt）
+#### 12.1.1 `docs/public/_headers`（受版本控制，Pages 自动生效）
+
+每次 deploy 自动生效，无需面板操作。当前内容（[源文件](../docs/public/_headers)）：
+
+| 路径 | Header | 作用 |
+|---|---|---|
+| `/*` | `X-Robots-Tag: noindex,nofollow,noarchive,nosnippet,noimageindex,nocache` | 比 `<meta>` 更早；只看 HTTP 头不解析 HTML 的爬虫也拦得住 |
+| `/*` | `Referrer-Policy: no-referrer` | 减少点击外链时泄露站内 URL |
+| `/*` | `X-Content-Type-Options: nosniff` | 防 MIME 嗅探攻击 |
+| `/*` | `X-Frame-Options: DENY` | 防被 iframe 嵌套抓取 |
+| `/*` | `Permissions-Policy: browsing-topics=(), interest-cohort=()` | 拒 FLoC / Topics API 等浏览器侧追踪 |
+| `/*` | `Cross-Origin-Opener-Policy: same-origin` | 隔离弹窗拿不到 window.opener |
+| `/_honeypot/*` | `Cache-Control: no-store, no-cache, must-revalidate` | 蜜罐永不缓存，每次命中都到边缘 |
+| `/robots.txt`, `/ai.txt`, `/LICENSE` | `Cache-Control: public, max-age=300` | 政策类文件 5 分钟短缓存，改了就快速生效 |
+
+**修改方法**：改 `docs/public/_headers` 文件 → 推 main → CI 自动部署。**禁止**通过 Cloudflare 面板的 Headers UI 改（会和 git 不同步）。
+
+#### 12.1.2 Cloudflare 自动施加的"基线"防御（不可见、不可调）
+
+`*.pages.dev` 自动享受：DDoS 抗压 / HTTPS 强制 / 通用 Bot 评分 / SNI 边缘缓存。这部分没有 UI，没有规则可写，只是底线兜底。
+
+### 12.2 升级到完整 L2：绑定自定义域名（可选）
+
+当下面的任一条件成立时建议升级：
+
+- 单月看到的 bot 流量异常飙升
+- 团队希望用更友好的 URL（如 `docs.your-company.cn`）
+- 想拿 WAF Custom Rules / Rate Limiting / Turnstile Challenge
+
+升级步骤：
+
+1. **拥有一个域名**（任何 TLD，`.xyz` 注册价 ~$1/年起）
+2. **Cloudflare 接管 DNS**：Dashboard → Add a site → 输域名 → 按提示改 NS 到 Cloudflare
+3. **Pages 项目 → Custom domains → Set up a custom domain** → 输入子域如 `docs.your-domain.cn`
+4. CF 自动给该子域签 SSL 证书
+5. **回到 Dashboard → 选刚加的 domain（Zone）→ 左侧 Security 菜单**——这才出现 WAF / Bots / Rate Limit
+6. 配置以下规则（只在 zone 层有效）：
+
+   **Security › Bots › Bot Fight Mode** → ON
+
+   **Security › WAF › Custom rules** → 新建两条：
 
    ```
-   Field: User Agent
-   Operator: contains (any of)
+   #1 屏蔽已知 AI bot UA（兜底）
+   Field: User Agent  Operator: contains (any of)
    Value: GPTBot, OAI-SearchBot, ClaudeBot, anthropic-ai, CCBot,
           Bytespider, PerplexityBot, Google-Extended, Applebot-Extended,
           Amazonbot, Diffbot, cohere-ai, Meta-ExternalAgent, FacebookBot
    Action: Block
    ```
 
-   规则 #2：蜜罐路径触发即拉黑
-
    ```
-   Field: URI Path
-   Operator: contains
+   #2 蜜罐路径拉黑
+   Field: URI Path  Operator: contains
    Value: /_honeypot/
    Action: Block
    ```
 
-3. **Security › Settings › Rate Limiting** → 新建：
-
+   **Security › Settings › Rate Limiting** → 新建：
    ```
-   When: same client IP requests same URI > 50 times in 1 minute
-   Then: Managed Challenge (Turnstile invisible)
+   When: same IP requests same URI > 50 times in 1 minute
+   Then: Managed Challenge
    ```
 
-4. **Security › Settings › Browser Integrity Check** → ON
+   **Security › Settings › Browser Integrity Check** → ON
 
-5. **Speed › Optimization › Auto Minify** → 全关（VitePress 已自带）
+   **(Pro $20/月) Security › Bots › Super Bot Fight Mode** → AI Scrapers and Crawlers = Block
 
-6. **(可选) Pro 计划：Security › Bots › Super Bot Fight Mode** → AI Scrapers and Crawlers = Block
+7. 同步把 Pages → Custom domains 中的 `*.pages.dev` 设置为 redirect 到 custom domain（`Redirect to custom domain` 选项），杜绝有人绕过 WAF 直接访问 pages.dev
 
-### 12.2 日常巡检（每两周）
+### 12.3 日常巡检（每两周）
 
-- Cloudflare Dashboard → Analytics & Logs → Security Events：看 24h Block 趋势
-- 异常波动（Block 数 > 平时 5 倍）→ 看 Top Source IP / Top User Agent
-- WAF 规则误伤：合法用户被 Challenge → 加白名单（**Security › Tools › IP Access Rules**）
+- **当前形态（无自定义域名）**：Cloudflare Dashboard → Analytics & Logs（账号级）查看 lewisdocs.pages.dev 的 24h request 量，确认无异常爬取
+- **有自定义域名后**：Dashboard → 选 domain → Analytics & Logs → Security Events：看 Block 趋势 / Top Source IP / Top User Agent
+- WAF 规则误伤：合法用户被 Challenge → Security › Tools › IP Access Rules → Action: Allow
 
 ### 12.3 水印取证流程
 
