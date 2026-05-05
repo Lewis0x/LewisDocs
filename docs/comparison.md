@@ -215,7 +215,7 @@ REST API + 领域语言
 
 样本中 7/8 平台采用某种形式的分层 API（Onshape 是例外，单层 REST + FeatureScript）。
 
-最经典实现：AutoCAD 的"六层金字塔"[回链：3.1 §二 API 整体架构：六层金字塔](/platforms/autocad#二、api-整体架构-六层金字塔)：
+最经典实现：AutoCAD 的"六层金字塔"[3.1 §二 API 整体架构：六层金字塔](/platforms/autocad#二、api-整体架构-六层金字塔)：
 
 ```
 Web JavaScript API (ISV web 开发)
@@ -249,7 +249,7 @@ ObjectARX (深度 C++ 扩展)
 
 ### 3.2 模式 B：声明式建模 vs 命令式建模
 
-⭐ 在样本的参数化 CAD 平台中，从命令式到声明式是观察到的演进方向 [证据等级 B（适用范围：参数化 CAD 子集）]回链：[3.2 §六 Spec/Result/Update](/platforms/catia#六、spec-result-update-三段式-catia-特征建模哲学)；[3.3 §三 Common Object Model](/platforms/nx#三、common-object-model-session-part-feature-builder)；[3.4 §五 FeatureScript](/platforms/onshape#五、featurescript-内嵌-dsl)：
+⭐ 在样本的参数化 CAD 平台中，从命令式到声明式是观察到的演进方向 [证据等级 B（适用范围：参数化 CAD 子集）][3.2 §六 Spec/Result/Update](/platforms/catia#六、spec-result-update-三段式-catia-特征建模哲学)；[3.3 §三 Common Object Model](/platforms/nx#三、common-object-model-session-part-feature-builder)；[3.4 §五 FeatureScript](/platforms/onshape#五、featurescript-内嵌-dsl)：
 
 | 范式 | 代表平台 | 特征 |
 |---|---|---|
@@ -282,7 +282,7 @@ FreeCAD (FeaturePython)→ execute() 重计算回调
 | **Onshape** | Custom property + FeatureScript Map type |
 | **FreeCAD** | Property System（强类型，多种 Property 类）|
 
-⭐ **MicroStation 的 ECSchema 系统在样本中是较完整的"工程元数据"实现** [回链：3.5 §六 ECObjects / ECSchema](/platforms/microstation#六、ecobjects-ecschema-bentley-独有的元元模型)——支持类、关系、自定义属性、强类型、XML/JSON 序列化。
+⭐ **MicroStation 的 ECSchema 系统在样本中是较完整的"工程元数据"实现** [3.5 §六 ECObjects / ECSchema](/platforms/microstation#六、ecobjects-ecschema-bentley-独有的元元模型)——支持类、关系、自定义属性、强类型、XML/JSON 序列化。
 
 > **[评论]** 扩展数据机制的层级化反映"轻量到重量"的设计需求：(1) 简单标签 → 轻量 KV，(2) 结构化属性 → 强类型 schema，(3) 工程数据集成 → 关系建模 + 元元模型。**适用边界**：强 schema 系统对工程数据集成场景（BIM、PLM、跨工具治理）特别重要，对于设计师友好型平台或不强调跨工具数据治理的场景，简单的属性字典已足够——schema 强度应匹配数据集成需求，而不是越高越好。
 
@@ -299,7 +299,7 @@ FreeCAD (FeaturePython)→ execute() 重计算回调
 | SketchUp | **17+ 类 Observer** ⭐ | ⭐ 极高 |
 | FreeCAD | boost::signals2 单向 | 中（DocumentObject 级）|
 
-⭐ **SketchUp Observer 机制颗粒度在样本中较细** [回链：3.7 §五 Observer 模式](/platforms/sketchup#五、observer-模式-17-类高粒度事件)——AppObserver / ModelObserver / EntitiesObserver / EntityObserver / SelectionObserver / ToolsObserver / ViewObserver 等 17+ 类。这种细粒度事件让 SketchUp 扩展可以做精细监控，但也带来"观察者生命周期陷阱"。
+⭐ **SketchUp Observer 机制颗粒度在样本中较细** [3.7 §五 Observer 模式](/platforms/sketchup#五、observer-模式-17-类高粒度事件)——AppObserver / ModelObserver / EntitiesObserver / EntityObserver / SelectionObserver / ToolsObserver / ViewObserver 等 17+ 类。这种细粒度事件让 SketchUp 扩展可以做精细监控，但也带来"观察者生命周期陷阱"。
 
 ### 3.5 模式 E：UI 扩展的两条路线
 
@@ -320,7 +320,7 @@ FreeCAD (FeaturePython)→ execute() 重计算回调
 └── 多数 CAD 提供 HtmlDialog 等价机制
 ```
 
-⭐ **观察**：嵌入式 Web UI 替代或补充原生 UI 是 2010s+ 的趋势。CEF（Chromium Embedded Framework）在样本中被多个平台采用作为嵌入式 Web UI 的实现选择 [证据等级 B][回链：3.7 §六 UI::HtmlDialog](/platforms/sketchup#六、ui-htmldialog-web-集成的现代化路径)。
+⭐ **观察**：嵌入式 Web UI 替代或补充原生 UI 是 2010s+ 的趋势。CEF（Chromium Embedded Framework）在样本中被多个平台采用作为嵌入式 Web UI 的实现选择 [证据等级 B][3.7 §六 UI::HtmlDialog](/platforms/sketchup#六、ui-htmldialog-web-集成的现代化路径)。
 
 ### 3.6 模式 F：协作模式演进
 
@@ -348,7 +348,7 @@ FreeCAD (FeaturePython)→ execute() 重计算回调
 - 不是真正的同步协作
 ```
 
-⭐ **观察**：在本系列覆盖的 8 个样本中，Onshape 是较少见的实现完整 Git 式 CAD 协作的平台 [回链：3.4 §三 git 式四层数据模型](/platforms/onshape#三、核心数据模型-git-式四层)。Bentley iTwin 的 ChangeSet 接近但仍是线性。商业 CAD 主流仍是 PDM check-out/check-in。
+⭐ **观察**：在本系列覆盖的 8 个样本中，Onshape 是较少见的实现完整 Git 式 CAD 协作的平台 [3.4 §三 git 式四层数据模型](/platforms/onshape#三、核心数据模型-git-式四层)。Bentley iTwin 的 ChangeSet 接近但仍是线性。商业 CAD 主流仍是 PDM check-out/check-in。
 
 ---
 
@@ -358,7 +358,7 @@ FreeCAD (FeaturePython)→ execute() 重计算回调
 
 下面列出每个平台**在样本中较罕见**的设计决策——其他样本平台没有等价物：
 
-| 平台 | 在样本中较罕见的设计 | 回链 |
+| 平台 | 在样本中较罕见的设计 | 参考 |
 |---|---|---|
 | **AutoCAD** | Custom Entity + Object Enabler 平台经济学（保护 ISV 算法 + 让标准用户可查看） | 3.1 §四 ObjectARX 核心机制 |
 | **CATIA** | mkmk 编译期强制 Authorized vs Internal API 边界 | 3.2 §五 Authorized vs Internal API |
@@ -529,7 +529,7 @@ ECObjects (Bentley) ──→ ECSchema/BIS ──→ iModel
 
 ### 7.2 趋势 B：AI 整合的务实路线
 
-2025-2026 各 CAD 厂商的 AI 整合多瞄准"减少重复劳动" 回链：[3.1 §一 历史演进](/platforms/autocad#一、历史演进-从-r12-到-2027-的-api-时间线)；[3.6 §九 SolidWorks 2026](/platforms/solidworks#九、solidworks-2026-aura-ai-与-30-周年)；[3.7 §九 SketchUp 2025-2026](/platforms/sketchup#九、sketchup-2025–2026-新一代演进)：
+2025-2026 各 CAD 厂商的 AI 整合多瞄准"减少重复劳动" [3.1 §一 历史演进](/platforms/autocad#一、历史演进-从-r12-到-2027-的-api-时间线)；[3.6 §九 SolidWorks 2026](/platforms/solidworks#九、solidworks-2026-aura-ai-与-30-周年)；[3.7 §九 SketchUp 2025-2026](/platforms/sketchup#九、sketchup-2025–2026-新一代演进)：
 - AutoCAD 2026 Smart Blocks（自动 block 转换）
 - SolidWorks 2026 Aura AI + 自动生成 Drawing
 - SketchUp 2026.1 AI Render + AI Assistant
@@ -557,7 +557,7 @@ Python 集成程度演进观察：
 
 ### 7.4 趋势 D：开源 CAD 的近期进展
 
-FreeCAD 1.0（2024-11）的发布是开源 CAD 的标志性事件 [回链：3.8 §一 历史演进](/platforms/freecad#一、历史演进-22-年开源-cad-之旅)。OCCT 8.0 即将发布（2026-02）。开源工具链（FreeCAD + KiCad + Blender + OpenSCAD + Onshape FeatureScript 公开标准库）正在形成更完整的设计-制造工具链。
+FreeCAD 1.0（2024-11）的发布是开源 CAD 的标志性事件 [3.8 §一 历史演进](/platforms/freecad#一、历史演进-22-年开源-cad-之旅)。OCCT 8.0 即将发布（2026-02）。开源工具链（FreeCAD + KiCad + Blender + OpenSCAD + Onshape FeatureScript 公开标准库）正在形成更完整的设计-制造工具链。
 
 > **[评论]** 截至 2026 年初观察，开源 CAD 在以下场景显示活跃度：(1) 教育市场，(2) 中小企业入门，(3) 中国国产化讨论的相关路径，(4) 嵌入式 + PCB + 3D 打印整合工具链。但在高端航空航天、汽车造型等场景，商业 CAD（CATIA / NX）的主流地位短期内仍将延续——具体的市场份额演进缺乏可靠的公开数据。**[证据等级 B/C]**
 
@@ -583,7 +583,7 @@ FreeCAD 1.0（2024-11）的发布是开源 CAD 的标志性事件 [回链：3.8 
 
 ### 8.1 启示 A：API 设计反映客户基础
 
-CAD API 设计常常反映客户基础与商业战略 回链：[3.2 §五 Authorized API](/platforms/catia#五、authorized-api-vs-internal-api-mkmk-的编译期校验)；[3.7 §一 历史演进](/platforms/sketchup#一、历史演进-从-last-software-到-trimble-ai-时代)；[3.4 §一 历史背景](/platforms/onshape#一、历史背景与所有权变迁)：
+CAD API 设计常常反映客户基础与商业战略 [3.2 §五 Authorized API](/platforms/catia#五、authorized-api-vs-internal-api-mkmk-的编译期校验)；[3.7 §一 历史演进](/platforms/sketchup#一、历史演进-从-last-software-到-trimble-ai-时代)；[3.4 §一 历史背景](/platforms/onshape#一、历史背景与所有权变迁)：
 - **CATIA CAA 严格组件 + 编译期 API 边界**：与服务航空航天巨头的兼容承诺战略相关
 - **SketchUp Ruby 极简 .rbz 分发**：与服务设计师群体的低门槛战略相关
 - **NX Common API 四语言对等**：与服务多元客户、不让语言偏好限制功能的战略相关
@@ -639,7 +639,7 @@ CAD API 设计常常反映客户基础与商业战略 回链：[3.2 §五 Author
 - **Hirschtick 21 点队故事**：来自 Wikipedia 与公开访谈，具体细节有不同来源。
 - **Onshape 内核来源**：Onshape 不公开内核来源，社区共识是基于 Parasolid 衍生（PTC 收购前历史复杂），属推论。
 - **证据等级标签局限**：A/B/C 标签是作者写作辅助自评，不是基于客观指标的评分。
-- **回链精度局限**：3.x 报告的章节粒度是中文一级编号（§一/§二/§三），本文档回链最多到此粒度。
+- **引用精度局限**：3.x 报告的章节粒度是中文一级编号（§一/§二/§三），本文档跨文档引用最多到此粒度。
 
 ---
 

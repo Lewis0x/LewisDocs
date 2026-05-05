@@ -233,11 +233,15 @@ def rewrite_in_file(fpath: Path) -> tuple[int, int]:
             last = m.end()
             continue
 
+        # 渲染时去掉 "回链：" 前缀——读者只看到 [3.4 §三 …](url) 这样的纯引用。
+        # 源文件里仍写 [回链：…]（这是给改写脚本认的语义标记），渲染输出更克制。
         if len(urls) == 1:
-            pieces.append(f'{full}({urls[0][1]})')
+            target = urls[0][0]
+            url = urls[0][1]
+            pieces.append(f'[{target}]({url})')
         else:
             link_parts = [f'[{t}]({u})' for t, u in urls]
-            pieces.append('回链：' + _SEP.join(link_parts))
+            pieces.append(_SEP.join(link_parts))
         rewritten += 1
         last = m.end()
 

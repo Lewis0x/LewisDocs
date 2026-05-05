@@ -354,7 +354,7 @@ FreeCAD (FeaturePython)→ execute() 重计算回调
 
 下面列出每个平台**在样本中较罕见**的设计决策——其他样本平台没有等价物：
 
-| 平台 | 在样本中较罕见的设计 | 回链 |
+| 平台 | 在样本中较罕见的设计 | 参考 |
 |---|---|---|
 | **AutoCAD** | Custom Entity + Object Enabler 平台经济学（保护 ISV 算法 + 让标准用户可查看） | 3.1 §四 ObjectARX 核心机制 |
 | **CATIA** | mkmk 编译期强制 Authorized vs Internal API 边界 | 3.2 §五 Authorized vs Internal API |
@@ -635,7 +635,7 @@ CAD API 设计常常反映客户基础与商业战略 [回链：3.2 §五 Author
 - **Hirschtick 21 点队故事**：来自 Wikipedia 与公开访谈，具体细节有不同来源。
 - **Onshape 内核来源**：Onshape 不公开内核来源，社区共识是基于 Parasolid 衍生（PTC 收购前历史复杂），属推论。
 - **证据等级标签局限**：A/B/C 标签是作者写作辅助自评，不是基于客观指标的评分。
-- **回链精度局限**：3.x 报告的章节粒度是中文一级编号（§一/§二/§三），本文档回链最多到此粒度。
+- **引用精度局限**：3.x 报告的章节粒度是中文一级编号（§一/§二/§三），本文档跨文档引用最多到此粒度。
 
 ---
 
