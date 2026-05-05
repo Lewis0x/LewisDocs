@@ -10,7 +10,8 @@
     "preview": "vitepress preview docs",
     "import": "python scripts/import_docs.py",
     "rewrite": "python scripts/rewrite_links.py",
-    "prepare-content": "npm run import && npm run rewrite"
+    "link-citations": "python scripts/link_citations.py",
+    "prepare-content": "npm run import && npm run rewrite && npm run link-citations"
   },
   "devDependencies": {
     "@floating-ui/vue": "^1.1.11",
