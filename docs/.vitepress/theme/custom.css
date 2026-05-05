@@ -6,6 +6,9 @@
   --vp-c-brand-1: #3c8772;
   --vp-c-brand-2: #5ea58e;
   --vp-c-brand-3: #3c8772;
+  /* 把整体布局上限从 1440px 拉到 1600px——让大屏 (≥1920) 能用上更多横向空间。
+   * 1600px 仍能容纳合理的左右留白，不会变成"超长一行难读"。 */
+  --vp-layout-max-width: 1600px;
 }
 
 /* 块引用区分 [判断] [评论] [推论] [陷阱] */
@@ -18,10 +21,54 @@
   line-height: 1.8;
 }
 
-/* 表格在窄屏下可横向滚动 */
+/* ---------------------------------------------------------------------------
+ * 正文宽度自适应
+ *
+ * VitePress 默认在"sidebar 开 + outline 开"时把 .content-container 卡在 688px
+ * (theme-default/components/VPDoc.vue 内联样式)——对中文长文 + 横向对比矩阵
+ * 远远不够。把它解放到"用满 aside 之外的可用空间"，正文段落仍由 .vp-doc 自己
+ * 的 readable-line-length 调控。
+ *
+ * 行为：
+ *   - 默认：content-container 用 100% 容器宽度（最高到 --vp-layout-max-width）
+ *   - .vp-doc 段落保持舒适阅读宽度（约 88ch），由 ::after 间距控制
+ *   - 表格、图、代码块、Mermaid 可以撑到容器宽度（消除横向滚动条）
+ *   - outline 折叠时（OutlineToggle 给 body 加了 .outline-collapsed），
+ *     右侧 aside 隐藏，容器自然继续放宽
+ * --------------------------------------------------------------------------- */
+.VPDoc.has-aside .content-container {
+  max-width: none !important;
+  width: 100%;
+}
+
+/* outline 折叠后，aside 的 spacer/curtain 也撤掉，content 不再被它们挤 */
+body.outline-collapsed .VPDoc.has-aside .container .aside {
+  display: none !important;
+}
+body.outline-collapsed .VPDoc.has-aside .content {
+  margin-left: 0 !important;
+  width: 100%;
+}
+
+/* 中文段落仍按 readable line-length 限宽。表格、图、Mermaid 可以撑满。 */
+.vp-doc > div > p,
+.vp-doc > div > ul,
+.vp-doc > div > ol,
+.vp-doc > div > blockquote {
+  max-width: 80ch;
+}
+
+/* 大表格（comparison.md 的横向矩阵）允许撑到容器宽度，避免横向滚动条 */
 .vp-doc table {
   display: table;
   overflow-x: auto;
+  width: 100%;
+  max-width: none;
+}
+.vp-doc .table-wrapper,
+.vp-doc div[class*="language-"] {
+  /* 代码块也跟随容器宽度 */
+  max-width: none;
 }
 
 /* ---------------------------------------------------------------------------
