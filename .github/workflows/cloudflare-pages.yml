@@ -73,13 +73,17 @@ jobs:
         run: rm -f docs/.vitepress/dist/_watermark-manifest.json
 
       # 首次部署：CF Pages 项目还不存在，wrangler 不会自动创建。
-      # continue-on-error: 项目已存在时此步会失败但不影响后续 deploy。
+      # 项目已存在时此步会失败但不影响后续 deploy（continue-on-error）。
+      # wranglerVersion 显式 pin —— 否则 action 会跑 `npx --no-install wrangler --version` 然后
+      # 在新版 wrangler 未缓存时触发 npm 的 "missing packages and no YES option" 报错，
+      # 让整个 step 失败逃出 continue-on-error 兜底。
       - name: Ensure Cloudflare Pages project exists
         uses: cloudflare/wrangler-action@v3
         continue-on-error: true
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '3.90.0'
           command: pages project create lewisdocs --production-branch=main
 
       - name: Deploy to Cloudflare Pages
@@ -87,4 +91,5 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '3.90.0'
           command: pages deploy docs/.vitepress/dist --project-name=lewisdocs --branch=main --commit-dirty=true
