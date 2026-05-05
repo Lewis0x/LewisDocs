@@ -1,5 +1,53 @@
 # 开发文档
 
+## 0. 金规则：本地优先（Local-First）
+
+**所有改动必须遵循"本地编辑 → git push → CI 自动部署"这一路径。** 这是不可协商的工作流硬规则。
+
+```
+✓ 推荐流程
+  本地工作副本（D:\Work\LewisDocs\）
+    ├─ 编辑 .md / config.ts / scripts/*.py / _headers …
+    ├─ 本地 npm run build 验证
+    ├─ git add  + git commit
+    └─ git push origin main
+        └─ GitHub Actions 触发 → 构建 → 部署到 Cloudflare Pages
+            └─ 几十秒后 https://lewisdocs.pages.dev/ 可见
+
+✗ 显式禁止
+  ❌ 在 GitHub 网页 UI 上直接 Edit / Commit
+  ❌ 在 Cloudflare Pages 面板 Settings 里改 Headers / Variables
+  ❌ 在 Cloudflare Pages 面板 Files 视图里编辑 dist 内容
+  ❌ 直接修改 docs/.vitepress/dist/ 的产物（每次 build 会被覆盖）
+  ❌ 修改 docs/index.md / docs/theory.md 等"派生"文件（这些由 source/ 生成）
+```
+
+### 为什么这条规则不能破？
+
+| 破坏路径 | 后果 |
+|---|---|
+| GitHub 网页 edit | 跳过本地构建验证；改完才知道断了 hydration / 锚点 / 搜索索引；和你本地工作副本立即分叉 |
+| CF 面板改 Headers | 没进 git；下次 push CF 自动重新部署会覆盖你手改的，且没有变更历史可追溯 |
+| 改 dist/ 产物 | 下次 build 全被覆盖；改了等于没改；浪费时间 |
+| 改 docs/index.md 等 | `npm run prepare-content` 会从 source/ 重新生成，覆盖你的改动 |
+
+### 哪些是"源文件"，哪些是"派生文件"
+
+| 类型 | 路径 | 改这里 |
+|---|---|---|
+| **源文件**（手工编辑） | `source/*.md` | 改研究内容 |
+| **源文件** | `docs/.vitepress/config.ts` | 改站点结构 / 主题 / meta |
+| **源文件** | `docs/.vitepress/theme/` | 改主题 |
+| **源文件** | `docs/public/` | robots.txt / ai.txt / _headers / 蜜罐页 |
+| **源文件** | `scripts/*.py` | 改导入 / 改写 / 水印逻辑 |
+| **源文件** | `project-docs/`、`README.md`、`LICENSE` | 元文档 |
+| **源文件** | `.github/workflows/`、`package.json` | CI / 构建配置 |
+| 派生文件 | `docs/index.md`、`docs/theory.md`、`docs/comparison.md`、`docs/platforms/*.md` | 由 `npm run prepare-content` 自动生成，**不要手改** |
+| 派生文件 | `docs/.vitepress/dist/` | 由 `npm run build` 生成，**不要手改** |
+| 派生文件 | `docs/.vitepress/cache/` | 同上 |
+
+---
+
 ## 1. 开发环境
 
 | 工具 | 版本 | 检查命令 |
@@ -14,22 +62,26 @@
 ## 2. 一次性准备
 
 ```bash
-# 在仓库根目录
-cd cad-api-docs
+# 1. 克隆 LewisDocs 到本地稳定路径（推荐 D:\Work\LewisDocs\）
+git clone https://github.com/Lewis0x/LewisDocs.git "D:/Work/LewisDocs"
+cd "D:/Work/LewisDocs"
 
-# 1. 装依赖（推荐用国内 npm 镜像）
+# 2. 装依赖（推荐用国内 npm 镜像）
 npm install --registry=https://registry.npmmirror.com
 # 或
 npm install
 
-# 2. 把 source/ 转为 docs/ 站点内容
+# 3. 把 source/ 转为 docs/ 站点内容
 npm run prepare-content
 # 此命令会依次执行 import + rewrite
 
-# 3. 启动开发服务器
+# 4. 启动开发服务器
 npm run dev
 # 浏览器打开 http://localhost:5173
 ```
+
+> **本地路径选择建议**：`D:\Work\LewisDocs\`（独立仓库，不在 Lewis0x/Work monorepo 内部）。
+> 不要放进 `D:\Work\Code\…` 路径下——那里是另一个 git 仓库（Lewis0x/Work），嵌套 git 会让外层仓库把 `LewisDocs/` 视为 untracked 子目录，制造干扰。
 
 ## 3. 目录与职责
 
@@ -72,6 +124,12 @@ npm run prepare-content
 
 # 3. dev server 已自动热更新；如未启动则
 npm run dev
+
+# 4. 验证无误后提交并推送
+git add source/
+git commit -m "docs(content): 修订 Onshape §五"
+git push origin main
+# CI 自动接管，约 90s 后线上更新（详见 §0 工作流图）
 ```
 
 ### 4.2 调整站点结构（导航 / 侧边栏 / 主题）

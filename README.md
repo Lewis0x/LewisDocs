@@ -14,14 +14,32 @@
 | 命中泄漏后的 DMCA 流程 | [project-docs/dmca-template.md](./project-docs/dmca-template.md) |
 
 
-## 在本地查看
+## 工作流：金规则
+
+**所有改动一律走"本地编辑 → git push → CI 自动部署"路径。**
+
+```
+本地 D:\Work\LewisDocs\  →  git push origin main  →  GitHub Actions  →  Cloudflare Pages
+                                                                           │
+                                                                           ▼
+                                                        https://lewisdocs.pages.dev/
+```
+
+✗ 不允许：在 GitHub Web UI 里 edit、在 Cloudflare 面板里改 Headers / Variables、改 `docs/.vitepress/dist/` 产物、改 `docs/index.md` 等派生文件。
+详见 [project-docs/03-development.md §0](./project-docs/03-development.md)。
+
+## 在本地查看 / 编辑
 
 ```bash
-# 一次性准备：把源文件转换为站点内容
+# 一次性：克隆到稳定路径
+git clone https://github.com/Lewis0x/LewisDocs.git "D:/Work/LewisDocs"
+cd "D:/Work/LewisDocs"
+
+# 一次性：装依赖 + 准备站点内容
 npm install
 npm run prepare-content
 
-# 启动开发服务器
+# 日常：本地预览
 npm run dev
 # 浏览器打开 http://localhost:5173
 ```
@@ -33,7 +51,7 @@ npm run dev
 ```bash
 npm run prepare-content   # 重新导入并改写回链
 npm run dev               # 本地预览
-git add . && git commit -m "update content" && git push
+git add . && git commit -m "docs(content): update X" && git push
 # CI 自动重新构建并发布
 ```
 
