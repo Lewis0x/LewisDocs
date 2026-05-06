@@ -22,23 +22,32 @@
 }
 
 /* ---------------------------------------------------------------------------
- * 正文宽度自适应
+ * 正文宽度自适应（≥1440px 大屏专门优化）
  *
- * VitePress 默认在 "sidebar + outline 都开" 时把 .content-container 卡在 688px
- * (theme-default/components/VPDoc.vue 内联样式)——对中文长文 + 12 列横向矩阵
- * 远远不够。但纯放宽 max-width 又会触发 flex 子元素的 min-content 行为：表格按
- * 内容固有宽度撑开 → 顶到右侧 aside 之下（视觉上"覆盖大纲"）。
+ * VitePress 默认行为问题：
+ *   1. ≥1440px 时把整个 .VPContent 限制在 --vp-layout-max-width (默认 1440px)
+ *      内并居中，在 1920+ 屏幕左右各留 ~160px+ 空白浪费横向空间
+ *   2. .content-container 在 has-aside 时卡 688px，对中文长文 + 12 列矩阵不够
+ *   3. 表格按内容固有宽度撑开会顶进右侧 aside 之下（flex min-content 默认行为）
  *
- * 正确解法（双管齐下）：
- *   1. .content 加 min-width: 0 —— 允许 flex item 收缩到小于内容固有宽度
- *      (默认 min-width: auto = min-content，正是导致表格挤压 aside 的元凶)
- *   2. 表格 display: block + overflow-x: auto —— 当表格内容仍超过容器，
- *      表格内部出现横向滚动条而非挤垮整个布局
- *   3. .content-container 解除 688px 上限 —— 让普通宽度的表格 / 图 / 代码块
- *      在大屏上撑满可用空间
- *   4. outline 折叠时（OutlineToggle 给 body 加 .outline-collapsed），
- *      整个右侧 aside 撤掉，正文吃满
+ * 联动解法：
+ *   - --vp-layout-max-width 设成 100vw，让 VitePress 的居中数学公式自动归零：
+ *       padding = (100vw - 100vw) / 2 = 0  → 无居中留白
+ *       sidebar.padding-left = max(32, (64)/2) = 32px → 贴左 32px
+ *     这样 sidebar 紧贴屏幕左边、content 顶住右 aside，整屏铺满
+ *   - .content-container 解除 688px 上限
+ *   - .content 加 min-width: 0（允许 flex 收缩到 < min-content）
+ *   - 表格 display: block + overflow-x: auto（超宽时表格自身横向滚动）
+ *   - outline 折叠时（OutlineToggle）整个右侧 aside 撤掉
  * --------------------------------------------------------------------------- */
+
+/* ≥1440 大屏：用 100vw 取代 1600px 的固定 max-width，消除居中空白 */
+@media (min-width: 1440px) {
+  :root {
+    --vp-layout-max-width: 100vw;
+  }
+}
+
 .VPDoc.has-aside .content-container {
   max-width: none !important;
   width: 100%;
