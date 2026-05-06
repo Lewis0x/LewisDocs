@@ -76,15 +76,16 @@ jobs:
         # manifest 是私密映射表，绝不能跟着 deploy 上线
         run: rm -f docs/.vitepress/dist/_watermark-manifest.json
 
-      # 全局安装 wrangler，避免 cloudflare/wrangler-action 的 `npx --no-install wrangler --version`
-      # pre-flight 检查在 npm 11+ 上触发 "missing packages and no YES option" 噪声（虽然 deploy
-      # 实际依然成功，但 gh run watch 会一直显示 X，干扰判断）。
-      - name: Pre-install wrangler globally (silence wrangler-action noise)
+      # 全局安装 wrangler，让 cloudflare/wrangler-action 的 pre-flight `npx --no-install
+      # wrangler --version` 检查在 npm 11+ 上能立即命中（不再触发 "missing packages" 报错）。
+      - name: Pre-install wrangler globally
         run: npm install -g wrangler@3.90.0
 
-      # 首次部署：CF Pages 项目还不存在，wrangler 不会自动创建。
-      # 项目已存在时此步会失败但不影响后续 deploy（continue-on-error）。
+      # 仅手动触发时尝试创建 CF Pages 项目（首次部署 / 重建场景）。
+      # 项目存在时该 API 返回 409 → step 标失败但被 continue-on-error 兜住。
+      # 平时 push 不跑此步，run 状态保持纯净（彻底消除 gh run watch 的误导 X）。
       - name: Ensure Cloudflare Pages project exists
+        if: github.event_name == 'workflow_dispatch'
         uses: cloudflare/wrangler-action@v3
         continue-on-error: true
         with:
