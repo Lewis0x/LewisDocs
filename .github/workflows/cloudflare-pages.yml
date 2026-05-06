@@ -24,6 +24,12 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      # 让 npm/npx 在 runner 上自动接受软件包安装提示（不再"missing packages and no YES option"）。
+      # GitHub Actions 把 npm 升级到 11+ 后默认行为变化：未缓存的 wrangler 4.x 会触发交互提示，
+      # 导致 cloudflare/wrangler-action 的 pre-flight 版本检查 step 标失败（虽然 continue-on-error
+      # 兜得住但日志里依然飘 X 误导）。这条彻底消除噪声。
+      npm_config_yes: 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4

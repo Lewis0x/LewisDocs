@@ -178,6 +178,24 @@ export default withMermaid({
     // ⚠️ 不要设 `anchor.permalink: false` — VitePress local search 的 splitPageIntoSections
     // 通过 heading 内的 <a href="#…">  锚点切分文档，禁掉 permalink 会导致整个搜索索引为空。
     // 默认 permalink 是 true（hover 显示 # 链接），保留即可。
+    config(md) {
+      // 把每个 <table> 包一层 .table-scroll-wrapper：
+      //   - wrapper 提供 overflow-x: auto（横向滚动条挂在 wrapper 上）
+      //   - 内部 table 保持 display:table（原生），width: max-content（按内容自然宽）
+      //   - 让 thead 的 position: sticky 能正确以"页面视口"为参照（display:block 的 table 会
+      //     因为自己创建滚动容器而把 sticky 锚到 table 内部，与"页面下滚时表头吸顶"的 UX 相悖）
+      const defaultOpen =
+        md.renderer.rules.table_open ||
+        ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options, env))
+      const defaultClose =
+        md.renderer.rules.table_close ||
+        ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options, env))
+      md.renderer.rules.table_open = (tokens, idx, options, env, self) =>
+        '<div class="table-scroll-wrapper">' +
+        defaultOpen(tokens, idx, options, env, self)
+      md.renderer.rules.table_close = (tokens, idx, options, env, self) =>
+        defaultClose(tokens, idx, options, env, self) + '</div>'
+    },
   },
 
   // Mermaid 配置：跟随 VitePress 主题切换深浅色
