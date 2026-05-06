@@ -3,6 +3,7 @@ import DefaultTheme from 'vitepress/theme'
 import type { Theme } from 'vitepress'
 import Honeypot from './components/Honeypot.vue'
 import OutlineToggle from './components/OutlineToggle.vue'
+import OutlineResizer from './components/OutlineResizer.vue'
 import Term from './components/Term.vue'
 import Lightbox from './components/Lightbox.vue'
 import './custom.css'
@@ -14,7 +15,7 @@ const theme: Theme = {
   // - layout-top slot：右上角"折叠本页大纲"按钮，状态写 localStorage
   Layout() {
     return h(DefaultTheme.Layout, null, {
-      'layout-top': () => h(OutlineToggle),
+      'layout-top': () => [h(OutlineToggle), h(OutlineResizer)],
       'layout-bottom': () => [h(Honeypot), h(Lightbox)],
     })
   },

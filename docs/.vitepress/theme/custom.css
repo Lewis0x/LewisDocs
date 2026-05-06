@@ -53,6 +53,29 @@
   width: 100%;
 }
 
+/* ---------------------------------------------------------------------------
+ * 大纲（aside）宽度可调
+ * 由 OutlineResizer.vue 写 --lewisdocs-outline-width，CSS 这边覆盖 VitePress
+ * 写死的 224 / 256px。
+ *
+ *   .aside           = flex item，max-width = 内容宽 + 32px padding-left
+ *   .aside-container = position:fixed，width 直接吃 --lewisdocs-outline-width
+ *   .aside-curtain   = 底部渐隐遮罩，跟随容器宽度
+ * --------------------------------------------------------------------------- */
+:root {
+  --lewisdocs-outline-width: 224px;
+}
+
+@media (min-width: 1280px) {
+  .VPDoc.has-aside .aside {
+    max-width: calc(var(--lewisdocs-outline-width) + 32px) !important;
+  }
+  .VPDoc.has-aside .aside-container,
+  .VPDoc.has-aside .aside-curtain {
+    width: var(--lewisdocs-outline-width) !important;
+  }
+}
+
 /* 关键：让 flex item .content 可被收缩，否则 12 列表格会强行撑爆并溢出到 aside 区 */
 .VPDoc.has-aside .content {
   min-width: 0 !important;
