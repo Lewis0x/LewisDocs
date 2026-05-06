@@ -8,17 +8,19 @@
  *   - ESC / 遮罩层空白处点击 / 关闭按钮 → 收回
  *   - 移动端：双指捏合缩放（pinch-to-zoom）
  *
- * 实现要点：
- *   - 不修改原 markdown，运行时用 MutationObserver 监听 .vp-doc 内
- *     新出现的 img / .mermaid-diagram svg，自动挂 click handler
- *   - 复用一个全局 modal DOM 节点，避免每张图重复挂载
- *   - SSR-safe：所有 DOM 操作都在 onMounted 之后
+ * 关键实现细节：
+ *   - SVG 用 cloneNode(true) 复制，append 到 stage 容器中（而非 v-html innerHTML）
+ *     —— innerHTML 把 SVG 节点当 HTML 解析，丢命名空间 / 不渲染。cloneNode 保留
+ *     SVG 节点正确身份。
+ *   - SVG 复制后强制 width:100% height:100% style，覆盖 Mermaid 写死的尺寸属性。
+ *   - MutationObserver 监听新出现的 .mermaid-diagram svg（Mermaid 在 mount 后才
+ *     异步渲染 SVG，必须懒挂 click handler）。
+ *   - SSR-safe：所有 DOM 操作只在 onMounted 之后。
  */
 import { onMounted, onBeforeUnmount, ref, nextTick } from 'vue'
 
 const visible = ref(false)
-const srcImg = ref<string>('')              // 当前展示的 image src（普通图片用）
-const srcSvg = ref<string>('')              // 当前展示的 SVG outerHTML（Mermaid 用）
+const stageEl = ref<HTMLDivElement | null>(null)
 const scale = ref(1)
 const tx = ref(0)
 const ty = ref(0)
@@ -29,21 +31,41 @@ let dragStartTx = 0
 let dragStartTy = 0
 let lastTouchDist = 0
 let observer: MutationObserver | null = null
-let routeWatchInterval: number | null = null
-let lastPath = ''
 
-function open(src: string, svgHtml?: string) {
-  srcImg.value = svgHtml ? '' : src
-  srcSvg.value = svgHtml || ''
+function clearStage() {
+  if (stageEl.value) stageEl.value.innerHTML = ''
+}
+
+function open(node: HTMLImageElement | SVGSVGElement) {
   scale.value = 1
   tx.value = 0
   ty.value = 0
   visible.value = true
   document.body.style.overflow = 'hidden'
+  // 等 modal 挂上 DOM 后再插入克隆节点
+  nextTick(() => {
+    if (!stageEl.value) return
+    clearStage()
+    const clone = node.cloneNode(true) as HTMLElement | SVGSVGElement
+    if (clone instanceof SVGElement) {
+      // 覆盖 Mermaid 写死的 width/height 属性，让 SVG 自由缩放到容器
+      clone.removeAttribute('width')
+      clone.removeAttribute('height')
+      clone.setAttribute('preserveAspectRatio', 'xMidYMid meet')
+      clone.style.cssText = 'width:90vw;height:85vh;max-width:90vw;max-height:85vh;display:block;'
+    } else if (clone instanceof HTMLImageElement) {
+      clone.removeAttribute('width')
+      clone.removeAttribute('height')
+      clone.style.cssText = 'max-width:90vw;max-height:85vh;width:auto;height:auto;display:block;'
+      clone.draggable = false
+    }
+    stageEl.value.appendChild(clone)
+  })
 }
 
 function close() {
   visible.value = false
+  clearStage()
   document.body.style.overflow = ''
 }
 
@@ -52,7 +74,6 @@ function onWheel(e: WheelEvent) {
   const delta = -e.deltaY
   const factor = delta > 0 ? 1.15 : 0.87
   const next = Math.max(0.3, Math.min(8, scale.value * factor))
-  // 缩放以鼠标位置为锚点
   const target = e.currentTarget as HTMLElement
   const rect = target.getBoundingClientRect()
   const mx = e.clientX - rect.left - rect.width / 2
@@ -122,26 +143,19 @@ function onTouchEnd() {
 function onKeyDown(e: KeyboardEvent) {
   if (!visible.value) return
   if (e.key === 'Escape') close()
-  else if (e.key === '0') {
-    scale.value = 1
-    tx.value = 0
-    ty.value = 0
-  } else if (e.key === '+' || e.key === '=') {
-    scale.value = Math.min(8, scale.value * 1.2)
-  } else if (e.key === '-' || e.key === '_') {
-    scale.value = Math.max(0.3, scale.value / 1.2)
-  }
+  else if (e.key === '0') { scale.value = 1; tx.value = 0; ty.value = 0 }
+  else if (e.key === '+' || e.key === '=') scale.value = Math.min(8, scale.value * 1.2)
+  else if (e.key === '-' || e.key === '_') scale.value = Math.max(0.3, scale.value / 1.2)
 }
 
 function attach() {
   // 给所有 .vp-doc 内的 img、.mermaid-diagram svg 挂 click handler
-  document.querySelectorAll<HTMLElement>('.vp-doc img:not([data-lightbox])').forEach((el) => {
+  document.querySelectorAll<HTMLImageElement>('.vp-doc img:not([data-lightbox])').forEach((el) => {
     el.dataset.lightbox = '1'
     el.style.cursor = 'zoom-in'
     el.addEventListener('click', (ev) => {
       ev.stopPropagation()
-      const img = el as HTMLImageElement
-      if (img.src) open(img.src)
+      open(el)
     })
   })
   document.querySelectorAll<SVGSVGElement>('.mermaid-diagram svg:not([data-lightbox])').forEach((el) => {
@@ -149,22 +163,15 @@ function attach() {
     el.style.cursor = 'zoom-in'
     el.addEventListener('click', (ev) => {
       ev.stopPropagation()
-      // 把当前 SVG 的 outerHTML 喂给 modal —— 全屏放大版
-      open('', el.outerHTML)
+      open(el)
     })
   })
 }
 
-function detach() {
-  // 不需要主动 detach（页面切换时 .vp-doc 内容会被重建）
-  // 但要在路由切换后重新 attach
-}
-
 onMounted(() => {
   attach()
-  // VitePress 单页路由切换时不会触发 mounted；用 MutationObserver 兜底
+  // Mermaid 在 mount 后异步渲染 SVG；MutationObserver 兜底捕获新增节点
   observer = new MutationObserver(() => {
-    // debounce: 让 DOM 稳定后再扫
     requestAnimationFrame(attach)
   })
   observer.observe(document.body, { childList: true, subtree: true })
@@ -209,22 +216,20 @@ onBeforeUnmount(() => {
           滚轮缩放 · 拖动平移 · Esc 关闭 · 0 还原
         </div>
         <div
+          ref="stageEl"
           class="lewisdocs-lightbox-stage"
           :style="{
             transform: `translate(${tx}px, ${ty}px) scale(${scale})`,
             cursor: dragging ? 'grabbing' : 'grab'
           }"
-        >
-          <img v-if="srcImg" :src="srcImg" alt="" draggable="false" />
-          <div v-else-if="srcSvg" v-html="srcSvg" />
-        </div>
+        ></div>
       </div>
     </transition>
   </Teleport>
 </template>
 
 <style>
-/* 不 scoped — 让里面的 svg 命中 */
+/* 不 scoped — 让里面的克隆 svg 也能命中 */
 .lewisdocs-lightbox-overlay {
   position: fixed;
   inset: 0;
@@ -240,22 +245,21 @@ onBeforeUnmount(() => {
 .lewisdocs-lightbox-stage {
   transform-origin: center center;
   transition: transform 0.05s linear;
-  max-width: 95vw;
-  max-height: 90vh;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.lewisdocs-lightbox-stage img,
-.lewisdocs-lightbox-stage svg {
-  max-width: 95vw;
-  max-height: 90vh;
-  width: auto;
-  height: auto;
   background: #fff;
   border-radius: 4px;
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+  padding: 12px;
+  /* stage 自己有大致尺寸——内部的 svg/img 撑满它 */
+  min-width: 200px;
+  min-height: 200px;
+}
+
+.lewisdocs-lightbox-stage > svg,
+.lewisdocs-lightbox-stage > img {
+  display: block;
 }
 
 .lewisdocs-lightbox-close {
@@ -294,7 +298,6 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
-/* 入场 / 退场动画 */
 .lewisdocs-lightbox-enter-active,
 .lewisdocs-lightbox-leave-active {
   transition: opacity 0.2s;
