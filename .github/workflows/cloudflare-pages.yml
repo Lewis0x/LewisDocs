@@ -25,10 +25,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      # 让 npm/npx 在 runner 上自动接受软件包安装提示（不再"missing packages and no YES option"）。
-      # GitHub Actions 把 npm 升级到 11+ 后默认行为变化：未缓存的 wrangler 4.x 会触发交互提示，
-      # 导致 cloudflare/wrangler-action 的 pre-flight 版本检查 step 标失败（虽然 continue-on-error
-      # 兜得住但日志里依然飘 X 误导）。这条彻底消除噪声。
+      # 让 npm/npx 在 runner 上自动接受软件包安装提示。GitHub Actions 升 npm 11+ 后未缓存
+      # wrangler 4.x 时会触发交互提示，叠加全局 install 步骤兜底。
       npm_config_yes: 'true'
     steps:
       - name: Checkout
@@ -78,11 +76,14 @@ jobs:
         # manifest 是私密映射表，绝不能跟着 deploy 上线
         run: rm -f docs/.vitepress/dist/_watermark-manifest.json
 
+      # 全局安装 wrangler，避免 cloudflare/wrangler-action 的 `npx --no-install wrangler --version`
+      # pre-flight 检查在 npm 11+ 上触发 "missing packages and no YES option" 噪声（虽然 deploy
+      # 实际依然成功，但 gh run watch 会一直显示 X，干扰判断）。
+      - name: Pre-install wrangler globally (silence wrangler-action noise)
+        run: npm install -g wrangler@3.90.0
+
       # 首次部署：CF Pages 项目还不存在，wrangler 不会自动创建。
       # 项目已存在时此步会失败但不影响后续 deploy（continue-on-error）。
-      # wranglerVersion 显式 pin —— 否则 action 会跑 `npx --no-install wrangler --version` 然后
-      # 在新版 wrangler 未缓存时触发 npm 的 "missing packages and no YES option" 报错，
-      # 让整个 step 失败逃出 continue-on-error 兜底。
       - name: Ensure Cloudflare Pages project exists
         uses: cloudflare/wrangler-action@v3
         continue-on-error: true
