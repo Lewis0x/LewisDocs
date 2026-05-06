@@ -98,13 +98,39 @@ body.outline-collapsed .VPDoc.has-aside .content {
   max-width: 80ch;
 }
 
-/* 表格：display:block 让 overflow-x:auto 真正生效（display:table 时浏览器会忽略 overflow），
- * 表格内容超过容器时表格自身横向滚动，绝不溢出到 aside */
-.vp-doc table {
-  display: block;
+/* 表格：用 wrapper 提供横向滚动 + thead 吸顶
+ *
+ * markdown.config 在 config.ts 给每张表外包一层 .table-scroll-wrapper：
+ *   - wrapper.overflow-x: auto → 表格超宽时横向滚动条挂在 wrapper 上
+ *   - 内部 table 保持 display:table（原生表格行为），width: max-content
+ *   - 这样 thead 的 position: sticky 锚定的是页面视口（不是表格内部），
+ *     用户向下滚动时表头会停在导航栏下方 → 12 列对比矩阵不再失焦
+ *
+ * 之前用 display:block + overflow-x:auto 直接挂在 table 上的方案有个副作用：
+ * sticky thead 会以表格自己为锚（因为 table 变成滚动容器），表头只在表格内部
+ * 浮动，对"页面下滚保持表头可见"无效。 */
+.vp-doc .table-scroll-wrapper {
   overflow-x: auto;
   max-width: 100%;
-  width: max-content;       /* 内容自然宽度，但 max-width: 100% 兜底 */
+  margin: 1em 0;
+}
+
+.vp-doc table {
+  display: table;
+  border-collapse: collapse;
+  margin: 0;                /* wrapper 接管外边距 */
+  width: max-content;       /* 表格按内容自然宽度，超出时 wrapper 横向滚动 */
+  max-width: none;
+}
+
+/* thead 吸顶：滚动时表头停在导航栏下方 */
+.vp-doc table thead th {
+  position: sticky;
+  top: var(--vp-nav-height, 64px);
+  background: var(--vp-c-bg);
+  z-index: 1;
+  /* 内嵌 box-shadow 模拟 1px 下边线，避免滚动时背后内容透过 */
+  box-shadow: inset 0 -1px 0 var(--vp-c-divider);
 }
 
 /* 代码块同理：超长代码行触发自身滚动条 */
