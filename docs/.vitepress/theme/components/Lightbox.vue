@@ -248,13 +248,20 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fff;
+  /* 使用主题背景变量 → 暗色模式自动用深底而非刺眼白底 */
+  background: var(--vp-c-bg, #fff);
+  color: var(--vp-c-text-1, #213547);
   border-radius: 4px;
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
   padding: 12px;
-  /* stage 自己有大致尺寸——内部的 svg/img 撑满它 */
   min-width: 200px;
   min-height: 200px;
+}
+
+/* Mermaid SVG 内 nodeLabel 用 currentColor 渲染中文，避免暗色模式下白底白字 */
+.lewisdocs-lightbox-stage .nodeLabel,
+.lewisdocs-lightbox-stage foreignObject > div {
+  color: var(--vp-c-text-1, #213547) !important;
 }
 
 .lewisdocs-lightbox-stage > svg,

@@ -33,38 +33,71 @@ function applyWidth(w: number) {
   document.documentElement.style.setProperty('--lewisdocs-outline-width', w + 'px')
 }
 
-function onMouseDown(e: MouseEvent) {
+function startDrag(clientX: number) {
   dragging = true
-  dragStartX = e.clientX
+  dragStartX = clientX
   dragStartWidth = width.value
   document.body.style.cursor = 'ew-resize'
   document.body.style.userSelect = 'none'
-  e.preventDefault()
-  window.addEventListener('mousemove', onMouseMove)
-  window.addEventListener('mouseup', onMouseUp)
 }
 
-function onMouseMove(e: MouseEvent) {
+function moveDrag(clientX: number) {
   if (!dragging) return
-  // 大纲在右侧——鼠标向 LEFT 拖 → 大纲变宽
-  const delta = dragStartX - e.clientX
+  // 大纲在右侧——指针向 LEFT 拖 → 大纲变宽
+  const delta = dragStartX - clientX
   const newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, dragStartWidth + delta))
   width.value = newWidth
   applyWidth(newWidth)
 }
 
-function onMouseUp() {
+function endDrag() {
   if (!dragging) return
   dragging = false
   document.body.style.cursor = ''
   document.body.style.userSelect = ''
-  window.removeEventListener('mousemove', onMouseMove)
-  window.removeEventListener('mouseup', onMouseUp)
   try {
     localStorage.setItem(STORAGE_KEY, String(width.value))
   } catch {
     // ignore
   }
+}
+
+function onMouseDown(e: MouseEvent) {
+  e.preventDefault()
+  startDrag(e.clientX)
+  window.addEventListener('mousemove', onMouseMove)
+  window.addEventListener('mouseup', onMouseUp)
+}
+
+function onMouseMove(e: MouseEvent) {
+  moveDrag(e.clientX)
+}
+
+function onMouseUp() {
+  window.removeEventListener('mousemove', onMouseMove)
+  window.removeEventListener('mouseup', onMouseUp)
+  endDrag()
+}
+
+function onTouchStart(e: TouchEvent) {
+  if (e.touches.length !== 1) return
+  startDrag(e.touches[0].clientX)
+  window.addEventListener('touchmove', onTouchMove, { passive: false })
+  window.addEventListener('touchend', onTouchEnd)
+  window.addEventListener('touchcancel', onTouchEnd)
+}
+
+function onTouchMove(e: TouchEvent) {
+  if (!dragging || e.touches.length !== 1) return
+  e.preventDefault()
+  moveDrag(e.touches[0].clientX)
+}
+
+function onTouchEnd() {
+  window.removeEventListener('touchmove', onTouchMove)
+  window.removeEventListener('touchend', onTouchEnd)
+  window.removeEventListener('touchcancel', onTouchEnd)
+  endDrag()
 }
 
 function onDoubleClick() {
@@ -96,6 +129,9 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('mousemove', onMouseMove)
   window.removeEventListener('mouseup', onMouseUp)
+  window.removeEventListener('touchmove', onTouchMove)
+  window.removeEventListener('touchend', onTouchEnd)
+  window.removeEventListener('touchcancel', onTouchEnd)
 })
 </script>
 
@@ -103,6 +139,7 @@ onBeforeUnmount(() => {
   <div
     class="lewisdocs-outline-resizer"
     @mousedown="onMouseDown"
+    @touchstart="onTouchStart"
     @dblclick="onDoubleClick"
     title="拖动调整大纲宽度（双击还原 224px）"
     role="separator"
