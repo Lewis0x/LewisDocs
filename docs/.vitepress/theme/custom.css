@@ -24,24 +24,32 @@
 /* ---------------------------------------------------------------------------
  * 正文宽度自适应
  *
- * VitePress 默认在"sidebar 开 + outline 开"时把 .content-container 卡在 688px
- * (theme-default/components/VPDoc.vue 内联样式)——对中文长文 + 横向对比矩阵
- * 远远不够。把它解放到"用满 aside 之外的可用空间"，正文段落仍由 .vp-doc 自己
- * 的 readable-line-length 调控。
+ * VitePress 默认在 "sidebar + outline 都开" 时把 .content-container 卡在 688px
+ * (theme-default/components/VPDoc.vue 内联样式)——对中文长文 + 12 列横向矩阵
+ * 远远不够。但纯放宽 max-width 又会触发 flex 子元素的 min-content 行为：表格按
+ * 内容固有宽度撑开 → 顶到右侧 aside 之下（视觉上"覆盖大纲"）。
  *
- * 行为：
- *   - 默认：content-container 用 100% 容器宽度（最高到 --vp-layout-max-width）
- *   - .vp-doc 段落保持舒适阅读宽度（约 88ch），由 ::after 间距控制
- *   - 表格、图、代码块、Mermaid 可以撑到容器宽度（消除横向滚动条）
- *   - outline 折叠时（OutlineToggle 给 body 加了 .outline-collapsed），
- *     右侧 aside 隐藏，容器自然继续放宽
+ * 正确解法（双管齐下）：
+ *   1. .content 加 min-width: 0 —— 允许 flex item 收缩到小于内容固有宽度
+ *      (默认 min-width: auto = min-content，正是导致表格挤压 aside 的元凶)
+ *   2. 表格 display: block + overflow-x: auto —— 当表格内容仍超过容器，
+ *      表格内部出现横向滚动条而非挤垮整个布局
+ *   3. .content-container 解除 688px 上限 —— 让普通宽度的表格 / 图 / 代码块
+ *      在大屏上撑满可用空间
+ *   4. outline 折叠时（OutlineToggle 给 body 加 .outline-collapsed），
+ *      整个右侧 aside 撤掉，正文吃满
  * --------------------------------------------------------------------------- */
 .VPDoc.has-aside .content-container {
   max-width: none !important;
   width: 100%;
 }
 
-/* outline 折叠后，aside 的 spacer/curtain 也撤掉，content 不再被它们挤 */
+/* 关键：让 flex item .content 可被收缩，否则 12 列表格会强行撑爆并溢出到 aside 区 */
+.VPDoc.has-aside .content {
+  min-width: 0 !important;
+}
+
+/* outline 折叠：彻底隐藏 aside，content 100% 撑满 */
 body.outline-collapsed .VPDoc.has-aside .container .aside {
   display: none !important;
 }
@@ -50,7 +58,7 @@ body.outline-collapsed .VPDoc.has-aside .content {
   width: 100%;
 }
 
-/* 中文段落仍按 readable line-length 限宽。表格、图、Mermaid 可以撑满。 */
+/* 中文段落仍按 readable line-length 限宽，避免变成"超长一行难读" */
 .vp-doc > div > p,
 .vp-doc > div > ul,
 .vp-doc > div > ol,
@@ -58,17 +66,25 @@ body.outline-collapsed .VPDoc.has-aside .content {
   max-width: 80ch;
 }
 
-/* 大表格（comparison.md 的横向矩阵）允许撑到容器宽度，避免横向滚动条 */
+/* 表格：display:block 让 overflow-x:auto 真正生效（display:table 时浏览器会忽略 overflow），
+ * 表格内容超过容器时表格自身横向滚动，绝不溢出到 aside */
 .vp-doc table {
-  display: table;
+  display: block;
   overflow-x: auto;
-  width: 100%;
-  max-width: none;
+  max-width: 100%;
+  width: max-content;       /* 内容自然宽度，但 max-width: 100% 兜底 */
 }
-.vp-doc .table-wrapper,
+
+/* 代码块同理：超长代码行触发自身滚动条 */
 .vp-doc div[class*="language-"] {
-  /* 代码块也跟随容器宽度 */
-  max-width: none;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* Mermaid 图：超大 timeline 也别撑爆 content（自己滚动 / 缩放） */
+.mermaid-diagram {
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 /* ---------------------------------------------------------------------------
