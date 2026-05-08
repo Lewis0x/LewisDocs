@@ -593,6 +593,61 @@ grep -rn ':global(body\|:global(html' docs/.vitepress/theme/components/
 
 ---
 
+### 12.6 sticky thead 在 wrapper 内锚错位置 / 表格行序错乱（2026-05-08）
+
+**症状**：用户两次报告 `https://lewisdocs.pages.dev/platforms/nx` 的表格"显示不对"。
+浏览器实测看到 §1.1 / §1.2 表格的表头行（如"年份/事件"）渲染在第一行数据
+（"1972 / United Computing..."）**之下**，整张表行序错乱。
+
+**根因**（重大，PR #10 起的连环错）：
+
+PR #10 给每张 `<table>` 包了 `.table-scroll-wrapper { overflow-x: auto }`（提供横向
+滚动）+ 给 `thead th` 加了 `position: sticky; top: var(--vp-nav-height)`（吸顶效果）。
+PR #10 commit message 自信地写"wrapper 让 sticky 能传播到页面视口"——**这个
+推理是错的**。
+
+CSS Overflow Module Level 3 明确：**任何 `overflow-x` 不为 `visible` 的元素都会
+成为 scroll container（且对 X / Y 双轴都生效）**。所以 wrapper 是 sticky 的
+"参照容器"，不是页面视口。
+
+浏览器实测数据：
+```
+table 顶部           = 49.875 px
+thead th sticky 位置 = 113.875 px  (= 49.875 + 64)  ← 锚到 wrapper-top + sticky.top
+tbody 第一行         = 90.875 px   (= 49.875 + thead.height)  ← 自然流走
+```
+
+→ thead 比 tbody 第一行**低 23 px**，视觉上第一行从表头上方冒出来，整张表
+看起来"错位"。
+
+**修复**：删掉 sticky thead 规则。表格回归自然布局。wrapper 保留（不影响普通表，
+对真正宽到爆的 12 列矩阵仍提供横向滚动）。
+
+**为什么 PR #10 / #13 多次没发现**（最重要的反思）：
+
+我每次 PR 后只做了：
+1. ✅ `npm run build` clean
+2. ✅ 检查 CSS bundle 是否包含新规则（sticky 规则确实在）
+3. ✅ 检查 HTML 结构合法（table / thead / tbody / tr 都对）
+4. ✅ 检查 0 broken anchors
+
+**全部都是静态检查，没有一次真正用浏览器打开页面看 sticky 实际效果**。
+Sticky 是"运行时 + 滚动相关"行为，bundle 里的规则文本对、HTML 结构对
+都不能验证它的真实表现。**布局类 / 滚动相关的 CSS PR 必须人眼看 2 遍**：
+顶部一遍、滚动后再一遍。
+
+**通用教训**（同等优先级 4 条）：
+
+1. **CSS sticky 在 scroll container 内只能锚到 scroll container 自己，不能"穿透"到外层视口**——`overflow-x: auto` 同样会成为锚（不只是 `overflow-y`）。想 sticky 锚到视口，sticky 元素的所有祖先到根都不能是 scroll container。
+2. **跨命名空间 sticky 行为没有"propagate to outer scroll"语义**。如果 wrapper 必须 `overflow-x: auto`（横向滚需求），就别试图同时让 thead sticky 锚到视口——这两件事 CSS 互斥，必须二选一或上 JS。
+3. **layout / sticky / 滚动行为不能用 bundle 检查代替肉眼**。修复 PR 必须打开浏览器、滚动、看效果。"Build clean + bundle 包含规则"是必要不是充分。
+4. **commit message 中的因果推理不等于事实**——PR #10 的 commit 写"wrapper 让 sticky 锚到视口"是错的；这种"自圆其说"的推理一旦写下，会误导后续 PR（包括我自己读 git log 时）。理论假设要在浏览器实测后才能写进 commit。
+
+**未来重新引入 sticky thead 的正确路径**：用 JS 监听 scroll，用 fixed-positioned
+的 cloned thead 跟随。不要再尝试纯 CSS sticky + wrapper 组合。
+
+---
+
 ### 12.x 模板（写新条目时复制此结构）
 
 ```markdown
