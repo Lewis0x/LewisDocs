@@ -72,6 +72,7 @@ export default withMermaid({
       { text: '首页', link: '/' },
       { text: '理论框架', link: '/theory' },
       { text: '横向对比', link: '/comparison' },
+      { text: 'UI 框架', link: '/ui-frameworks' },
       {
         text: '厂商深度',
         items: [
@@ -95,6 +96,12 @@ export default withMermaid({
           { text: '总目录与导读', link: '/' },
           { text: '理论框架（顶层）', link: '/theory' },
           { text: '横向对比（全景矩阵）', link: '/comparison' },
+        ],
+      },
+      {
+        text: '横向研究',
+        items: [
+          { text: 'UI 框架研究', link: '/ui-frameworks' },
         ],
       },
       {

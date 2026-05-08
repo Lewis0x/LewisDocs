@@ -23,6 +23,7 @@ FILE_MAP = {
     '3.6-SolidWorks-API设计深度剖析-V4.md': ('platforms/solidworks.md', 'SolidWorks API 设计深度剖析'),
     '3.7-SketchUp-Ruby-API设计深度剖析-V4.md': ('platforms/sketchup.md', 'SketchUp Ruby API 设计深度剖析'),
     '3.8-FreeCAD-API设计深度剖析-V4.md': ('platforms/freecad.md', 'FreeCAD API 设计深度剖析'),
+    '文档4-跨平台-CAD-UI-框架研究.md': ('ui-frameworks.md', '跨平台 CAD UI 框架研究'),
     '术语表-V4.md': ('glossary.md', '术语表'),
 }
 
