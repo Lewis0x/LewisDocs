@@ -108,3 +108,10 @@ Full methodology: `project-docs/05-annotation-methodology.md`.
 - **Search shows no results for "autocad"** → see "VitePress search index is empty" above; the bug is permalink-related, not the tokenizer
 - **`.vitepress/` placement** → must be inside `docs/`, not at repo root (VitePress treats `docs/` as project root since `vitepress build docs`)
 - **Slugify mismatch** → if anchors break, compare `scripts/rewrite_links.py` `vitepress_slugify` against `node_modules/vitepress/dist/node/chunk-*.js` — they must produce identical output
+- **Vue scoped CSS + `:global(body|html …)` = entire page hidden** → never write `:global(body.X) .scoped-Y { ... }` in a `<style scoped>`; Vue 3.5 drops the scoped child and produces just `body.X { display: none }`, blanking the page for any user with that body class. **Put body/html-targeting rules in `docs/.vitepress/theme/custom.css` (unscoped).** Full postmortem: [project-docs/03-development.md §12.1](./project-docs/03-development.md)
+- **`<Term def="...">` def value with inner ASCII `"` breaks Vue parser** → "Invalid end tag" build error. Use fullwidth `""` (U+201C/U+201D) inside def values, or run `python scripts/fix_term_quotes.py` to auto-convert
+- **Wide table overflows under right outline** → flex item default `min-width: auto` (= min-content) won't shrink for wide content. Add `min-width: 0` on the flex item AND wrap tables in a `.table-scroll-wrapper` div (markdown.config does this automatically)
+- **Lightbox shows blank modal for SVG** → `v-html` cannot render SVG inside an HTML container (namespace mismatch). Use `cloneNode(true) + appendChild` instead
+- **Real-time UI bugs only show for "old" users with cached state in localStorage** → After deploying any change to OutlineToggle / OutlineResizer / Lightbox / Term, **must test with a browser that has prior localStorage state**, not just a fresh tab. SSR HTML being correct ≠ page renders correctly post-hydration
+
+For full postmortems with root cause analysis, see [project-docs/03-development.md §12](./project-docs/03-development.md) — every entry there cost real downtime.

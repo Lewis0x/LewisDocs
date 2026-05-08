@@ -428,18 +428,198 @@ ci(gitlab): 修复 alpine 镜像 Python 路径
 | Cloudflare workflow `project not found` | 项目名大小写不匹配 | wrangler 用 `--project-name=LewisDocs`；CF 自动小写为 `lewisdocs` 用作子域 |
 | `_watermark-manifest.json` 不该在 dist 里 | CI 漏跑 strip 步骤 | 检查 `cloudflare-pages.yml` 中 `rm -f` 那行存在 |
 | 水印重复注入 | sentinel 守卫失效 | 检查 `scripts/watermark.py` 中 `<!--lwm-->` 检测是否完整 |
+| **某页面整页空白（其他页面正常）** | Vue scoped CSS 把 `body` 全局选择器误丢成 `display:none` | 见 §12.1 |
+| 部署日志 `gh run watch` 长期飘 X 但 `success` | wrangler-action 在 `continue-on-error` step 内的 npx 报错被吞但污染了 step 状态 | 见 §12.2 |
+| 表格挤进右侧大纲 | flex item 默认 `min-width: auto` = min-content，宽表撑爆 | 见 §12.3 |
+| Lightbox 打开后 SVG 不显示（白底空 modal） | `v-html` 把 SVG 当 HTML 解析，丢命名空间 | 见 §12.4 |
+| 全屏宽度浪费、左右各几百 px 留白 | VitePress ≥1440px 的居中 padding 公式以 `--vp-layout-max-width` 为基准 | 见 §12.5 |
 
-## 12. 反爬运维 SOP
+## 12. 主题层踩坑录（事故沉淀，按踩坑日期倒序）
+
+> 本节是用真金白银（实际事故）换来的具体坑，每条都包含**症状 / 根因 / 修复 / 通用教训**四块。改主题前先扫一眼。
+>
+> ⚠️ 写新组件 / 改 CSS 之前，**强烈建议**通读本节——大多数坑不是"是否会触发"的问题，而是"什么时候触发"。
+
+### 12.1 整页 `body { display: none }`（2026-05-08）
+
+**症状**：用户报告 `https://lewisdocs.pages.dev/platforms/nx` "显示为空"。但
+`curl` 拉 SSR HTML 一切正常（114 KB，结构完整），其他页面也都正常。
+
+**根因**（重大）：`OutlineResizer.vue` 的 scoped `<style>` 写了：
+
+```css
+:global(body.outline-collapsed) .lewisdocs-outline-resizer {
+  display: none;
+}
+```
+
+**Vue 3.5 的 scoped CSS 编译器对"`:global(parent)` + scoped child" 形态有 bug**——
+本应编译成 `body.outline-collapsed .lewisdocs-outline-resizer[data-v-X]{...}`，
+实际丢掉 scoped 子级，编译成：
+
+```css
+body.outline-collapsed { display: none; }   /* 整页消失 */
+```
+
+中招路径：用户曾点过"折叠大纲"按钮 → `localStorage` 存了状态 → 下次访问
+`OutlineToggle` 在 `onMounted` 里给 body 加 `outline-collapsed` class →
+被坏 CSS 命中 → 整页 `display:none`。**新访客**没碰过折叠按钮，body 不带 class，
+看不出任何问题——所以发布前没暴露。
+
+**修复**：把规则从 `.vue` 的 scoped style 移到 `custom.css`（unscoped 全局规则），
+和其他 `body.outline-collapsed` descendant 规则放一起。Vue 编译器不参与 → 不会被改。
+
+**通用教训**（同等优先级 3 条）：
+
+1. **任何涉及 body / html 全局 class 的样式规则，一律放 `custom.css`，不要进 `.vue` scoped style**。Vue scoped 与 `:global()` 嵌套语义有歧义，编译器实现不稳定。
+2. **localStorage 状态会"延迟引爆"无法在新会话首次访问发现的 bug**。任何用 localStorage 持久化 UI 状态的组件，发布后必须用一个**之前用过该状态的浏览器**实测一遍。
+3. **SSR HTML 正常 ≠ 页面正常显示**。关键 bug 在 hydration 后才发生。`curl` 只能验证 SSR；CSS / JS bug 必须实际打开浏览器看。
+
+**自检命令**（建议加 lint）：
+
+```bash
+# 找所有 .vue scoped style 中混用了 :global(body|html ...) 的写法
+grep -rn ':global(body\|:global(html' docs/.vitepress/theme/components/
+# 应输出 0 行
+```
+
+---
+
+### 12.2 CI deploy 永久飘 X 但实际 success（2026-05-05 → 2026-05-06）
+
+**症状**：每次 push 后 `gh run watch` 末尾打印 `X process npx failed exit code 1`，
+但 `gh run list` 显示该 run 状态 `success`，site 也正常更新。
+
+**根因**：`cloudflare/wrangler-action@v3` 启动时跑 `npx --no-install wrangler --version`
+做版本检测。npm 11+ 行为变化：找不到包时不再静默失败，而是要求 `--yes` 确认。
+该错误虽被 step 的 `continue-on-error: true` 吞掉，但 step 个体状态仍标失败，
+让 `gh run watch` 把 X 报上来——尽管整 run 是 success。
+
+更糟的是：`Ensure project exists` 步骤的实际命令（`pages project create`）每次 push
+也会失败，因为项目早已存在 → CF API 返 409。也是 `continue-on-error` 吞掉。
+两层叠加，X 永远飘。
+
+**修复**（演进了 3 个 PR 才彻底解决）：
+1. PR #4：在 wrangler-action 加 `wranglerVersion: '3.90.0'`（不够，pre-flight 早于 pin 应用）
+2. PR #11：在 step 之前加 `npm install -g wrangler@3.90.0`，让 pre-flight 直接命中（消除 npx 噪声）
+3. PR #12：把 `Ensure project exists` 加 `if: github.event_name == 'workflow_dispatch'`，平时不跑（消除 409 噪声）
+
+**通用教训**：
+
+- `continue-on-error: true` 只控制 **workflow 是否继续**，不抑制 step **个体的失败状态**。`gh run watch` / GitHub UI 仍会反映 step 失败。
+- 想真正"step 失败但表面无声"，要么用 shell `|| true` 包，要么把 step 拆成两个（一个不会失败的检测 + 一个可能失败的实际操作）。
+- 对于"项目已存在 → API 409"这种**幂等性失败**，正解是在 step 加 `if:` 条件让它不跑，而不是吞错。
+
+---
+
+### 12.3 表格挤进右侧大纲 / 整页内容溢出（2026-05-06）
+
+**症状**：12 列横向对比矩阵的右几列被右侧"本页大纲"挡住。把内容容器
+`max-width` 解除后情况更糟，宽表整体往右溢出。
+
+**根因**：CSS Flexbox 子元素的默认 `min-width: auto`（= min-content）。当 `.content`
+是 flex 子项、内部有宽表时，`min-content` 会强制 `.content` 至少撑到宽表的最窄
+不换行宽度——即 flex item 不允许收缩到小于内容固有宽度。结果宽表把
+`.content` 推到 aside 之下。
+
+**修复**：
+
+```css
+.VPDoc.has-aside .content { min-width: 0 !important; }    /* 允许 flex 收缩 */
+.vp-doc table { display: table; ... }                       /* 表格自然宽度 */
+.vp-doc .table-scroll-wrapper.table-wide table {            /* 宽表才允许 max-content */
+  min-width: max-content;
+}
+```
+
+**通用教训**：
+
+- **flex item 默认 `min-width: auto`**——任何 "flex 子项被宽内容撑爆" 的问题，第一反应就是 `min-width: 0`。
+- **宽表的 horizontal scroll 必须由 wrapper 提供，不能由 table 本身**：`display: table` 时 `overflow-x: auto` 不生效（table 不创建 scroll container）；改 `display: block` 又会让 sticky thead 失效（table 变成 sticky 的 ancestor，thead 锚到 table 内部而非视口）。**正解是在 table 外包一层 div 做 overflow-x，table 保持 display:table**。
+
+---
+
+### 12.4 Lightbox 打开后 SVG 看不见（2026-05-06）
+
+**症状**：点 Mermaid 图后，全屏遮罩层正常打开，但中间的图区域空白 / 看不到内容。
+
+**根因**：原版 Lightbox 用 `<div v-html="srcSvg" />` 把 Mermaid SVG 的 `outerHTML`
+字符串塞进 div。但 **SVG 通过 `innerHTML` 注入 HTML 元素时，浏览器按 HTML
+命名空间解析子节点**——SVG 节点虽被创建，但属于 HTML 命名空间，浏览器不
+渲染（生成"幽灵节点"）。
+
+**修复**：改用 `cloneNode(true)` 复制原 SVG 节点 + `appendChild` 到 stage div。
+克隆节点保留 SVG 命名空间，正常渲染。
+
+**通用教训**：
+
+- **HTML 容器内的 SVG 必须靠 `<svg>` 直接出现，或用 `cloneNode` / `DOMParser('image/svg+xml')` 创建**。
+- `v-html` / `innerHTML` 不能跨命名空间。
+- 类似 trap：MathML 元素也有同样问题（HTML 容器内 v-html MathML 字符串不渲染）。
+
+---
+
+### 12.5 大屏（≥1440 px）左右各留 100+ px 空白（2026-05-06）
+
+**症状**：用户在 1920+ 屏幕上抱怨"网页左侧还有些空白没有利用上"。
+
+**根因**：VitePress ≥1440px 时启动 centering padding 公式：
+
+```css
+.VPContent.has-sidebar {
+  padding-right: calc((100vw - var(--vp-layout-max-width)) / 2);
+  padding-left:  calc((100vw - var(--vp-layout-max-width)) / 2 + var(--vp-sidebar-width));
+}
+```
+
+默认 `--vp-layout-max-width: 1440px`。在 1920px 屏上左右各留 240px。
+我之前把它改成 1600px，仍剩 160px。
+
+**修复**：
+
+```css
+@media (min-width: 1440px) {
+  :root { --vp-layout-max-width: 100vw; }   /* 让 centering 公式归零 */
+}
+```
+
+`(100vw - 100vw) / 2 = 0` → padding 归零 → sidebar 贴左、content 顶满。
+
+**通用教训**：
+
+- 改 VitePress 默认布局**不要去 override 多条具体的 padding/margin 规则**——抓 source-of-truth 的 CSS 变量改。
+- VitePress 多个尺寸（layout、sidebar 宽度等）都通过 `--vp-*` 变量驱动；改变量即可批量生效，避开"覆盖式" override 的级联陷阱。
+- `--vp-layout-max-width: 100vw` 是个好套路：让 centering 自动失效而不破坏其他依赖该变量的计算。
+
+---
+
+### 12.x 模板（写新条目时复制此结构）
+
+```markdown
+### 12.N 一句话症状（YYYY-MM-DD）
+
+**症状**：用户/测试看到的现象。
+
+**根因**：技术性的根本原因（含错误链）。
+
+**修复**：具体改了什么。
+
+**通用教训**：抽象出来对未来类似问题有用的规则（1-3 条，每条独立可复用）。
+```
+
+---
+
+## 13. 反爬运维 SOP
 
 防御层布局见 [02-design.md ADR-009](./02-design.md)。本节是**操作手册**。
 
-### 12.1 当前部署形态（`*.pages.dev` 子域）能用的边缘控制
+### 13.1 当前部署形态（`*.pages.dev` 子域）能用的边缘控制
 
 ⚠️ **关键事实**：Cloudflare WAF Custom Rules / Bot Fight Mode 自定义 / Rate Limiting 是 **Zone（域名）层级**功能。绑定**自定义域名**之前，`lewisdocs.pages.dev` 项目的 Settings 页里**只有** Variables / Bindings / Runtime / General 四块，没有 Security / WAF / Bots / Rate Limit 入口。
 
 因此**当前架构**下的 L2 边缘控制只有两条：
 
-#### 12.1.1 `docs/public/_headers`（受版本控制，Pages 自动生效）
+#### 13.1.1 `docs/public/_headers`（受版本控制，Pages 自动生效）
 
 每次 deploy 自动生效，无需面板操作。当前内容（[源文件](../docs/public/_headers)）：
 
@@ -456,11 +636,11 @@ ci(gitlab): 修复 alpine 镜像 Python 路径
 
 **修改方法**：改 `docs/public/_headers` 文件 → 推 main → CI 自动部署。**禁止**通过 Cloudflare 面板的 Headers UI 改（会和 git 不同步）。
 
-#### 12.1.2 Cloudflare 自动施加的"基线"防御（不可见、不可调）
+#### 13.1.2 Cloudflare 自动施加的"基线"防御（不可见、不可调）
 
 `*.pages.dev` 自动享受：DDoS 抗压 / HTTPS 强制 / 通用 Bot 评分 / SNI 边缘缓存。这部分没有 UI，没有规则可写，只是底线兜底。
 
-### 12.2 升级到完整 L2：绑定自定义域名（可选）
+### 13.2 升级到完整 L2：绑定自定义域名（可选）
 
 当下面的任一条件成立时建议升级：
 
@@ -509,13 +689,13 @@ ci(gitlab): 修复 alpine 镜像 Python 路径
 
 7. 同步把 Pages → Custom domains 中的 `*.pages.dev` 设置为 redirect 到 custom domain（`Redirect to custom domain` 选项），杜绝有人绕过 WAF 直接访问 pages.dev
 
-### 12.3 日常巡检（每两周）
+### 13.3 日常巡检（每两周）
 
 - **当前形态（无自定义域名）**：Cloudflare Dashboard → Analytics & Logs（账号级）查看 lewisdocs.pages.dev 的 24h request 量，确认无异常爬取
 - **有自定义域名后**：Dashboard → 选 domain → Analytics & Logs → Security Events：看 Block 趋势 / Top Source IP / Top User Agent
 - WAF 规则误伤：合法用户被 Challenge → Security › Tools › IP Access Rules → Action: Allow
 
-### 12.3 水印取证流程
+### 13.4 水印取证流程
 
 当怀疑某段我们的内容被采集进了某个语料 / AI 模型 / 抓取站时：
 
@@ -543,14 +723,14 @@ python scripts/scan_corpus.py manifest.json --dir ./downloaded_corpus/
 水印特征：每页 96 bit（48 个零宽字符），用 sentinel `<!--lwm-->...<!--/lwm-->` 包裹。
 即使被 markdown normalizer 部分清理，前 24 字符 prefix match 仍能命中（partial）。
 
-### 12.4 误报响应
+### 13.5 误报响应
 
 合法读者被 Cloudflare 误挡（极少见）：
 - 在 CF Dashboard → Security Events → 找到该 IP 的 Block 记录
 - 临时白名单：Security › Tools › IP Access Rules → Action: Allow
 - 长期方案：调整 WAF 规则的精度（缩小 UA 列表 / 提高 Rate Limit 阈值）
 
-### 12.5 升级路径（按需启用）
+### 13.6 升级路径（按需启用）
 
 | 触发条件 | 升级动作 |
 |---|---|
@@ -559,7 +739,7 @@ python scripts/scan_corpus.py manifest.json --dir ./downloaded_corpus/
 | 内容被泄漏到公开数据集 | 走 DMCA 模板（`project-docs/dmca-template.md`） + Hugging Face removal request |
 | 持续被同一 IP 段攻击 | 在 CF 面板加国家 / 网段级 Block |
 
-### 12.6 不要做的事
+### 13.7 不要做的事
 
 - ❌ 不要禁用 watermark.py（CI 会失去取证能力）
 - ❌ 不要把 `_watermark-manifest.json` 上传到任何公开仓库（manifest 一旦泄漏，水印就废）
@@ -568,7 +748,7 @@ python scripts/scan_corpus.py manifest.json --dir ./downloaded_corpus/
 
 ---
 
-## 13. 给后来者的话
+## 14. 给后来者的话
 
 这个项目刻意保持小：
 
