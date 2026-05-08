@@ -102,13 +102,13 @@ body.outline-collapsed .VPDoc.has-aside .content {
  *
  * markdown.config 在 config.ts 给每张表外包一层 .table-scroll-wrapper：
  *   - wrapper.overflow-x: auto → 表格超宽时横向滚动条挂在 wrapper 上
- *   - 内部 table 保持 display:table（原生表格行为），width: max-content
- *   - 这样 thead 的 position: sticky 锚定的是页面视口（不是表格内部），
- *     用户向下滚动时表头会停在导航栏下方 → 12 列对比矩阵不再失焦
+ *   - 内部 table 保持 display:table（原生表格行为，sticky 才能正确传播）
+ *   - 普通表格自然宽度自适应；只有真正"宽到爆"的表格（如 D2 §2.1 的 12 列矩阵）
+ *     才需要横向滚动——通过给该 wrapper 加 .table-wide class 强制不换行
  *
- * 之前用 display:block + overflow-x:auto 直接挂在 table 上的方案有个副作用：
- * sticky thead 会以表格自己为锚（因为 table 变成滚动容器），表头只在表格内部
- * 浮动，对"页面下滚保持表头可见"无效。 */
+ * 之前 width: max-content 强制所有表格按 max-content 撑开，即使是 2 列小表
+ * 也按"内容尽量不换行"来撑——这会让 5 行 2 列的小表也变得很宽，遮蔽 emit
+ * 视觉的"窄表"应有的紧凑感。改回让表格按"列内容自然宽度"自适应。 */
 .vp-doc .table-scroll-wrapper {
   overflow-x: auto;
   max-width: 100%;
@@ -119,8 +119,11 @@ body.outline-collapsed .VPDoc.has-aside .content {
   display: table;
   border-collapse: collapse;
   margin: 0;                /* wrapper 接管外边距 */
-  width: max-content;       /* 表格按内容自然宽度，超出时 wrapper 横向滚动 */
-  max-width: none;
+}
+
+/* 只对显式标记的"宽表格"启用 max-content 不换行行为（横向滚动） */
+.vp-doc .table-scroll-wrapper.table-wide table {
+  min-width: max-content;
 }
 
 /* thead 吸顶：滚动时表头停在导航栏下方 */

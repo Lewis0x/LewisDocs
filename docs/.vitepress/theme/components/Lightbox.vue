@@ -166,6 +166,12 @@ function attach() {
       open(el)
     })
   })
+  // 给 ≥6 列的宽表格 wrapper 加 .table-wide → CSS 触发 min-width:max-content 不换行
+  document.querySelectorAll<HTMLDivElement>('.vp-doc .table-scroll-wrapper:not([data-wide-checked])').forEach((wrapper) => {
+    wrapper.dataset.wideChecked = '1'
+    const cols = wrapper.querySelectorAll('thead th').length
+    if (cols >= 6) wrapper.classList.add('table-wide')
+  })
 }
 
 onMounted(() => {
