@@ -126,15 +126,17 @@ body.outline-collapsed .VPDoc.has-aside .content {
   min-width: max-content;
 }
 
-/* thead 吸顶：滚动时表头停在导航栏下方 */
-.vp-doc table thead th {
-  position: sticky;
-  top: var(--vp-nav-height, 64px);
-  background: var(--vp-c-bg);
-  z-index: 1;
-  /* 内嵌 box-shadow 模拟 1px 下边线，避免滚动时背后内容透过 */
-  box-shadow: inset 0 -1px 0 var(--vp-c-divider);
-}
+/* ⚠️ 不要给 thead th 加 position: sticky！
+ *
+ * 错误尝试 (PR #10) 详细复盘见 project-docs/03-development.md §12.6：
+ *   - .table-scroll-wrapper { overflow-x: auto } 让 wrapper 成为 scroll container
+ *   - sticky 锚到 wrapper（不能穿透到页面视口）
+ *   - thead 被压到 "wrapper 顶 + sticky.top" 的位置，与 tbody 第一行错位重叠
+ *   - 视觉效果：表头跑到第一行下面，表格"显示错乱"
+ *
+ * 正确实现需要 JS（监听 scroll + clone 一份 fixed thead），暂未做。
+ * 现阶段表头按自然流走，不吸顶——可接受的代价。
+ */
 
 /* 代码块同理：超长代码行触发自身滚动条 */
 .vp-doc div[class*="language-"] {
