@@ -187,8 +187,8 @@ onBeforeUnmount(() => {
   }
 }
 
-/* outline 折叠态：藏掉 resizer */
-:global(body.outline-collapsed) .lewisdocs-outline-resizer {
-  display: none;
-}
+/* outline 折叠态时藏 resizer 的规则放在 custom.css 里——
+ * Vue 的 scoped CSS 编译器对 `:global(body.X) .scoped-class` 这种
+ * "全局父级 + scoped 子级" 形态会编译错（实测 vue@3.5：会丢掉
+ * scoped 子级，只剩 `body.X { display:none }`，把整页藏起来）。 */
 </style>
