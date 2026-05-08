@@ -200,6 +200,13 @@ body.outline-collapsed .VPDocAside .toggle-button {
   display: none !important;
 }
 
+/* OutlineResizer 在折叠态隐藏（不能放在 OutlineResizer.vue 的 scoped style 里——
+ * Vue 的 scoped CSS 对 `:global(body.X) .scoped-Y` 形态会编译错，把 .scoped-Y
+ * 给丢掉变成 `body.X { display:none }`，把整页藏起来） */
+body.outline-collapsed .lewisdocs-outline-resizer {
+  display: none !important;
+}
+
 /* 给右上角折叠按钮预留空间，避免遮挡 outline 第一行 */
 .VPDocAsideOutline {
   padding-right: 32px;
