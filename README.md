@@ -22,7 +22,7 @@
 本地 D:\Work\LewisDocs\  →  git push origin main  →  GitHub Actions  →  Cloudflare Pages
                                                                            │
                                                                            ▼
-                                                        https://lewisdocs.cadapi.dev/
+                                                        https://lewisdocs.pages.dev/
 ```
 
 ✗ 不允许：在 GitHub Web UI 里 edit、在 Cloudflare 面板里改 Headers / Variables、改 `docs/.vitepress/dist/` 产物、改 `docs/index.md` 等派生文件。
@@ -64,7 +64,7 @@ git add . && git commit -m "docs(content): update X" && git push
    - `CLOUDFLARE_API_TOKEN`
    - `CLOUDFLARE_ACCOUNT_ID`
 3. 推到 `main`，CI（`.github/workflows/cloudflare-pages.yml`）自动构建并部署
-4. 公开 URL：`https://lewisdocs.cadapi.dev/`（自定义域名，绑定到 `lewisdocs` Pages 项目；CF 自动签 SSL 证书）
+4. 默认 URL：`https://lewisdocs.pages.dev/`（Cloudflare 自动小写项目名）
 5. 首次部署成功后，到 Cloudflare 面板按 [03-development.md §13](./project-docs/03-development.md) 启用 WAF 规则、Bot Fight Mode、Rate Limiting
 
 ### 选项 B（已停用，可回退）：GitHub Pages

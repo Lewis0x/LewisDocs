@@ -15,7 +15,7 @@
 > I am the copyright owner (or authorized agent thereof) of original
 > research content published at the URL below:
 >
->     Original work URL: https://lewisdocs.cadapi.dev/<PAGE-PATH>
+>     Original work URL: https://lewisdocs.pages.dev/<PAGE-PATH>
 >     Repository:        https://github.com/Lewis0x/LewisDocs
 >     License:           CC BY-NC-ND 4.0 + AI Use Restriction Addendum
 >                        (full text: https://github.com/Lewis0x/LewisDocs/blob/main/LICENSE)
