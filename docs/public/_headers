@@ -1,7 +1,7 @@
 # Cloudflare Pages 边缘响应头配置
 # 文档：https://developers.cloudflare.com/pages/configuration/headers/
 # 这是 *.pages.dev 默认子域上**唯一**可下发的反爬硬控信号——
-# 一旦绑定自定义域名，可以追加 zone 级 WAF 规则（见 project-docs/03-development.md §12）。
+# 一旦绑定自定义域名，可以追加 zone 级 WAF 规则（见 project-docs/03-development.md §13）。
 
 # ---------------------------------------------------------------------------
 # 全站默认：所有路径都拒索引 + 反 iframe + 反内嵌

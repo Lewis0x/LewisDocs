@@ -65,7 +65,7 @@ git add . && git commit -m "docs(content): update X" && git push
    - `CLOUDFLARE_ACCOUNT_ID`
 3. 推到 `main`，CI（`.github/workflows/cloudflare-pages.yml`）自动构建并部署
 4. 默认 URL：`https://lewisdocs.pages.dev/`（Cloudflare 自动小写项目名）
-5. 首次部署成功后，到 Cloudflare 面板按 [03-development.md §12](./project-docs/03-development.md) 启用 WAF 规则、Bot Fight Mode、Rate Limiting
+5. 首次部署成功后，到 Cloudflare 面板按 [03-development.md §13](./project-docs/03-development.md) 启用 WAF 规则、Bot Fight Mode、Rate Limiting
 
 ### 选项 B（已停用，可回退）：GitHub Pages
 
