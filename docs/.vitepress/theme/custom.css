@@ -90,13 +90,14 @@ body.outline-collapsed .VPDoc.has-aside .content {
   width: 100%;
 }
 
-/* 中文段落仍按 readable line-length 限宽，避免变成"超长一行难读" */
-.vp-doc > div > p,
-.vp-doc > div > ul,
-.vp-doc > div > ol,
-.vp-doc > div > blockquote {
-  max-width: 80ch;
-}
+/* 段落 / 列表 / 引用块不再硬限 max-width。
+ * 历史原因（已废弃）：早期想用 80ch 控制中文阅读行宽，避免"超长一行难读"。
+ * 实际问题：sidebar + aside 已天然把 content 限到合理宽度，再叠 80ch cap
+ * 在大屏（≥1920px）会留出大片空白（实测浪费 35% 可用宽度）。
+ * 当前由 aside 自身宽度（默认 224px，可拖到 560px）作为内容区的弹性约束：
+ *   - 用户嫌行太长 → 拖 OutlineResizer 把 aside 拖宽 → content 自动变窄
+ *   - 用户嫌行太短 → 反向操作 / 折叠 outline
+ * 把行宽控制权交给用户，比固定 cap 灵活。 */
 
 /* 表格：用 wrapper 提供横向滚动 + thead 吸顶
  *
