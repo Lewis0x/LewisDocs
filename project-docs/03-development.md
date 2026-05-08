@@ -12,7 +12,7 @@
     ├─ git add  + git commit
     └─ git push origin main
         └─ GitHub Actions 触发 → 构建 → 部署到 Cloudflare Pages
-            └─ 几十秒后 https://lewisdocs.pages.dev/ 可见
+            └─ 几十秒后 https://lewisdocs.cadapi.dev/ 可见
 
 ✗ 显式禁止
   ❌ 在 GitHub 网页 UI 上直接 Edit / Commit
@@ -762,7 +762,10 @@ deployment metadata 字段。
 
 防御层布局见 [02-design.md ADR-009](./02-design.md)。本节是**操作手册**。
 
-### 13.1 当前部署形态（`*.pages.dev` 子域）能用的边缘控制
+> **状态注记（2026-05-08）**：自定义域名 `lewisdocs.cadapi.dev` 已规划绑定。具体步骤见 §13.2「升级路径」。
+> 在 CF 那边的 DNS + Pages → Custom domains 步骤完成之前，下面 §13.1 描述的"仅 `*.pages.dev` 子域"形态仍是真实生效状态。
+
+### 13.1 旧基线（仅 `*.pages.dev` 子域，custom domain 未绑定时）
 
 ⚠️ **关键事实**：Cloudflare WAF Custom Rules / Bot Fight Mode 自定义 / Rate Limiting 是 **Zone（域名）层级**功能。绑定**自定义域名**之前，`lewisdocs.pages.dev` 项目的 Settings 页里**只有** Variables / Bindings / Runtime / General 四块，没有 Security / WAF / Bots / Rate Limit 入口。
 
@@ -789,22 +792,23 @@ deployment metadata 字段。
 
 `*.pages.dev` 自动享受：DDoS 抗压 / HTTPS 强制 / 通用 Bot 评分 / SNI 边缘缓存。这部分没有 UI，没有规则可写，只是底线兜底。
 
-### 13.2 升级到完整 L2：绑定自定义域名（可选）
+### 13.2 升级路径：绑定自定义域名 `lewisdocs.cadapi.dev`
 
-当下面的任一条件成立时建议升级：
+升级触发条件（任一成立时建议）：
 
 - 单月看到的 bot 流量异常飙升
-- 团队希望用更友好的 URL（如 `docs.your-company.cn`）
+- 团队希望用更友好的 URL（本项目已选 `lewisdocs.cadapi.dev`）
 - 想拿 WAF Custom Rules / Rate Limiting / Turnstile Challenge
 
-升级步骤：
+升级步骤（本项目执行版本，2026-05-08 起）：
 
-1. **拥有一个域名**（任何 TLD，`.xyz` 注册价 ~$1/年起）
-2. **Cloudflare 接管 DNS**：Dashboard → Add a site → 输域名 → 按提示改 NS 到 Cloudflare
-3. **Pages 项目 → Custom domains → Set up a custom domain** → 输入子域如 `docs.your-domain.cn`
-4. CF 自动给该子域签 SSL 证书
-5. **回到 Dashboard → 选刚加的 domain（Zone）→ 左侧 Security 菜单**——这才出现 WAF / Bots / Rate Limit
-6. 配置以下规则（只在 zone 层有效）：
+1. **拥有 `cadapi.dev` 域名**（已具备）
+2. **Cloudflare 接管 cadapi.dev DNS**：Dashboard → Add a site → 输 `cadapi.dev` → 按提示改 NS 到 Cloudflare
+3. **DNS 加 CNAME 记录**：在 cadapi.dev zone 里加 `lewisdocs CNAME lewisdocs.pages.dev`（橙云代理打开）
+4. **Pages 项目 → Custom domains → Set up a custom domain** → 输入 `lewisdocs.cadapi.dev`（或 CLI：`wrangler pages domain add lewisdocs.cadapi.dev --project-name=lewisdocs`）
+5. CF 自动给该子域签 SSL 证书（`.dev` TLD 强制 HTTPS + HSTS preload，无 HTTP fallback）
+6. **回到 Dashboard → 选 `cadapi.dev`（Zone）→ 左侧 Security 菜单**——这才出现 WAF / Bots / Rate Limit
+7. 配置以下规则（只在 zone 层有效）：
 
    **Security › Bots › Bot Fight Mode** → ON
 
@@ -836,12 +840,12 @@ deployment metadata 字段。
 
    **(Pro $20/月) Security › Bots › Super Bot Fight Mode** → AI Scrapers and Crawlers = Block
 
-7. 同步把 Pages → Custom domains 中的 `*.pages.dev` 设置为 redirect 到 custom domain（`Redirect to custom domain` 选项），杜绝有人绕过 WAF 直接访问 pages.dev
+8. 同步把 Pages → Custom domains 中的 `lewisdocs.pages.dev` 设置为 redirect 到 `lewisdocs.cadapi.dev`（Pages 设置里的 `Redirect to custom domain` 选项），杜绝有人绕过 WAF 直接访问 pages.dev
 
 ### 13.3 日常巡检（每两周）
 
-- **当前形态（无自定义域名）**：Cloudflare Dashboard → Analytics & Logs（账号级）查看 lewisdocs.pages.dev 的 24h request 量，确认无异常爬取
-- **有自定义域名后**：Dashboard → 选 domain → Analytics & Logs → Security Events：看 Block 趋势 / Top Source IP / Top User Agent
+- **`*.pages.dev` 旧形态（无自定义域名 / custom domain 尚未绑定）**：Cloudflare Dashboard → Analytics & Logs（账号级）查看 lewisdocs.pages.dev 的 24h request 量，确认无异常爬取
+- **`cadapi.dev` 当前形态（自定义域名已绑定）**：Dashboard → 选 `cadapi.dev` zone → Analytics & Logs → Security Events：看 Block 趋势 / Top Source IP / Top User Agent
 - WAF 规则误伤：合法用户被 Challenge → Security › Tools › IP Access Rules → Action: Allow
 
 ### 13.4 水印取证流程

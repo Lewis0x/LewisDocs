@@ -5,7 +5,7 @@ name: Deploy to Cloudflare Pages
 #   - CLOUDFLARE_API_TOKEN  (Account › Cloudflare Pages › Edit)
 #   - CLOUDFLARE_ACCOUNT_ID (Cloudflare 仪表板右侧栏 Account ID)
 # 项目名 lewisdocs（CF Pages 要求全小写；首次部署前由下面的 project create 步骤建立）。
-# 默认上线地址：https://lewisdocs.pages.dev/
+# 公开上线地址：https://lewisdocs.cadapi.dev/  （CF Pages 自定义域名，绑定到 lewisdocs.pages.dev）
 
 on:
   push:

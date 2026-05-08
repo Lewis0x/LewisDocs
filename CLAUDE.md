@@ -17,7 +17,7 @@ local working copy (D:\Work\LewisDocs\)
    → git push origin main
    → GitHub Actions CI
    → Cloudflare Pages deploy
-   → https://lewisdocs.pages.dev/
+   → https://lewisdocs.cadapi.dev/
 ```
 
 **NEVER:**
@@ -117,7 +117,7 @@ Use `npm run build:no-watermark` for local debugging only; never commit/deploy w
 
 - VitePress 1.5+ static site (with `vitepress-plugin-mermaid` for diagrams), source = 11 V4 Markdown research docs (~174k 字)
 - Search = local index, Chinese tokenized via `Intl.Segmenter` (browser) / regex fallback (build-time Node)
-- Hosted on **Cloudflare Pages** (project name: `lewisdocs`, URL: `https://lewisdocs.pages.dev/`)
+- Hosted on **Cloudflare Pages** (project name: `lewisdocs`, canonical URL: `https://lewisdocs.cadapi.dev/`; `*.pages.dev` 子域 `https://lewisdocs.pages.dev/` 仍是 CF 内部部署目标，会重定向到 cadapi.dev)
 - CI = **GitHub Actions** (`.github/workflows/cloudflare-pages.yml`); concurrency group `cloudflare-pages`
 - Anti-crawler = 5 layers (robots.txt + meta noindex incl. AI bots + edge `_headers` + `_honeypot/` + zero-width watermark + CC BY-NC-ND 4.0 LICENSE w/ AI-use restriction) — see `project-docs/02-design.md` ADR-009
 - Old GitHub Pages workflow is disabled (`if: false` in `pages.yml`); `.gitlab-ci.yml` is a parallel fallback target
