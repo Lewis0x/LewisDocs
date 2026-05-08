@@ -687,6 +687,61 @@ content-container = 1377px (扣除 sidebar + aside)
 
 ---
 
+### 12.8 CF Pages deploy 因 commit message 含 emoji 失败（2026-05-08）
+
+**症状**：CI 跑到 `Deploy to Cloudflare Pages` step，文件已经 ✨ 上传成功
+（116/116 + `_headers`），但最后 deployment record 创建报错：
+
+```
+ERROR  A request to the Cloudflare API
+  (/accounts/.../pages/projects/lewisdocs/deployments) failed.
+  Invalid commit message, it must be a valid UTF-8 string. [code: 8000111]
+```
+
+retry 同一 commit 永远失败。grep 本地 commit message 是 valid UTF-8（hex
+dump 显示标准 4 字节 emoji + 3 字节中文字符均合规）。
+
+**根因**：`wrangler pages deploy --commit-dirty=true` 默认从 git 拉
+`%B`（commit body）作为 deployment metadata，通过 HTTP header
+`X-Commit-Message: ...` 转发给 CF API。HTTP header 受 RFC 7230
+约束 ASCII-only（latin-1 也只能算工程容忍）；wrangler 没做 base64 /
+percent-encoding，emoji 字节直接落进 header → CF 网关在 parse 阶段
+判定 "not valid UTF-8" 并返回 8000111。
+
+也就是说："message 内容本身是 UTF-8" ≠ "transport 通道允许 UTF-8"。
+
+文件实际已经在 CF KV 落地，只是 deployments API 拒绝绑定，所以 `gh
+run watch` 看到 X 但 `https://lewisdocs.pages.dev/` 上一次成功部署仍可访问。
+不会"崩坏"，只是"新内容不上线"。
+
+**修复**：emoji + 箭头从 commit message 里去掉，下一次 push 就能成功。
+具体此次：`📄 → 🔗 ← →` 全替换为 ASCII（如 `[file] -> [link]`），
+中文段落保留——后续观察发现纯中文 + ASCII 标点也能正常通过（CF 网关
+只在 emoji / 4 字节 UTF-8 字符上失败）。
+
+历史触发的 commit：878a827。修复手段是新增一个 commit（绝不 amend），
+让 CI 重新跑一次 deploy step；新 commit 的 message 会覆盖
+deployment metadata 字段。
+
+**通用教训**：
+
+1. **CI / API metadata 要保守编码**——commit / PR / 工单标题等所有
+   "传给第三方系统的字符串" 默认按 ASCII 写，emoji 留给 README 或
+   PR description body（那些走 form-data，不走 header）。
+2. **"上传成功 ≠ 部署成功"**——日志里看到 `✨ Success! Uploaded
+   90 files (...)` 别就放心，要看到 deployment URL（如
+   `https://abc123.lewisdocs.pages.dev`）才算 done。
+3. **诊断顺序**：CF 报 "invalid UTF-8" 时优先检查 transport 路径
+   （header / query string），不是先怀疑 git blob 内容——blob 几乎
+   不可能不是 UTF-8 因为 git 自身按 byte 存储不在乎编码。
+4. **wrangler 默认行为可被 `--commit-message="ASCII safe text"` 显式
+   覆盖**，但不在 `pages deploy` 一次性使用——长期方案是 CI
+   workflow 里加一个 `Sanitize commit message` step（grep 替换 emoji
+   后再传给 wrangler）。本次没改 workflow，只靠"commit 时不写 emoji"
+   这条人为约束兜底；如果未来又踩坑，再升级到自动化 sanitize step。
+
+---
+
 ### 12.x 模板（写新条目时复制此结构）
 
 ```markdown
