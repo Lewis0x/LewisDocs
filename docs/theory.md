@@ -47,7 +47,7 @@ CAD 平台的 API 设计与一般企业软件 API 设计存在显著差异：
 
 1. **使用周期长**：CAD 软件的客户投资周期常达 20-30 年——一个航空企业的 CATIA 二次开发代码可追溯到 1990s 末。SaaS 应用 5 年迭代是常态，CAD 平台 5 年破坏性变更代价巨大 [3.2 §一 历史演进](/platforms/catia#一、历史演进-从-cati-1977-到-3dexperience-2014)；[3.1 §一 历史演进](/platforms/autocad#一、历史演进-从-r12-到-2027-的-api-时间线)。
 2. **数据是核心资产**：CAD 文件不是"应用产生的副产品"，而是企业的核心知识产权。文件格式选择是长期战略决策。
-3. **几何复杂度高**：参数化建模、特征关联性、拓扑命名等问题难以彻底解决——商业 CAD 经过 40 年仍在持续改进，开源 CAD 直到 2024 年 FreeCAD 1.0 才有较成熟的 <Term def="拓扑命名问题：参数化 CAD 中上游特征变化导致下游 face/edge ID 失效、模型断裂的根本性挑战。" href="/glossary#tnp-topological-naming-problem-拓扑命名问题">TNP</Term> 修复方案 [3.8 §五 TopoShape 与 ElementMap](/platforms/freecad#五、toposhape-与-elementmap-拓扑命名修复)。
+3. **几何复杂度高**：参数化建模、特征[关联性](/glossary#关联性-associativity)、拓扑命名等问题难以彻底解决——商业 CAD 经过 40 年仍在持续改进，开源 CAD 直到 2024 年 FreeCAD 1.0 才有较成熟的 <Term def="拓扑命名问题：参数化 CAD 中上游特征变化导致下游 face/edge ID 失效、模型断裂的根本性挑战。" href="/glossary#tnp-topological-naming-problem-拓扑命名问题">TNP</Term> 修复方案 [3.8 §五 TopoShape 与 ElementMap](/platforms/freecad#五、toposhape-与-elementmap-拓扑命名修复)。
 4. **生态价值常大于产品价值**：在样本平台中，AutoCAD/CATIA/NX 的护城河在很大程度上来自 ISV 生态、垂直产品矩阵、客户嵌入的工作流。
 5. **变化的传播代价高**：在企业级软件中改 API 影响一个项目；在 CAD 平台中改 API 可能让 ISV 的众多 plugin 失效，进而影响客户的工作流 [3.1 §一 AutoCAD VS 版本绑定历史](/platforms/autocad#一、历史演进-从-r12-到-2027-的-api-时间线)。
 
