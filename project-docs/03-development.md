@@ -648,6 +648,45 @@ Sticky 是"运行时 + 滚动相关"行为，bundle 里的规则文本对、HTML
 
 ---
 
+### 12.7 段落 80ch cap 在大屏上浪费 35% 空间（2026-05-08）
+
+**症状**：用户截图显示 2048px 屏幕上 content 区域中段大片空白——文字只占左半边，
+右半边到 outline 之间空着。
+
+**根因**：早期为"控制中文阅读行宽"加了
+
+```css
+.vp-doc > div > p,
+.vp-doc > div > ul,
+.vp-doc > div > ol,
+.vp-doc > div > blockquote {
+  max-width: 80ch;
+}
+```
+
+但实际：sidebar (272px) + aside (224-560px 用户可调) 已经天然把 content 区限到
+合理宽度。再叠 80ch cap 在大屏上就：
+
+```
+viewport         = 2048px
+content-container = 1377px (扣除 sidebar + aside)
+段落实际宽度      = 751px (被 80ch 卡住)
+浪费               = 626px (45%)
+```
+
+**修复**：直接撤掉 80ch cap。让 sidebar/aside 作为唯一约束源，aside 宽度由
+用户通过 OutlineResizer 拖拽控制——把行宽控制权交给用户，比固定 cap 灵活。
+
+修复后实测：段落宽度从 751 涨到 1359（吃满容器减一点 padding），浪费 1.3%。
+
+**通用教训**：
+
+1. **CSS 约束要"一处足够"**——sidebar/aside flex layout 已经在约束 content 宽度时，正文段落不需要再叠 max-width。多重约束 = 取最小，而最小那一层往往不是你想要的。
+2. **"为可读性设防御"的固定值在大屏上往往变成浪费**——80ch 在 1080p 屏幕上合理，在 2K/4K 屏上就显得局促。如果是 readability cap，应该用 `min(80ch, 100% - padding)` 之类相对值，或干脆把控制权交给用户（resizable aside）。
+3. **再次印证 §12.6 教训**：layout 类 PR 必须用浏览器实测确认布局占用。我加 80ch cap 时只看了"代码逻辑对"，没在大屏上看实际效果——直到用户截图才发现。
+
+---
+
 ### 12.x 模板（写新条目时复制此结构）
 
 ```markdown
