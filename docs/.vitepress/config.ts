@@ -117,6 +117,7 @@ export default withMermaid({
           { text: '3.6 SolidWorks', link: '/platforms/solidworks' },
           { text: '3.7 SketchUp Ruby', link: '/platforms/sketchup' },
           { text: '3.8 FreeCAD', link: '/platforms/freecad' },
+          { text: '3.9 BricsCAD (BRX + Qt/QML)', link: '/platforms/bricscad' },
         ],
       },
       {
