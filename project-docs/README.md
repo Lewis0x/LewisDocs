@@ -1,7 +1,7 @@
 # 项目文档索引
 
 本目录是 `LewisDocs` 这个**站点工程本身**的元文档。
-区别于 `docs/`（对外发布的 11 份研究内容）和 `source/`（原始 V4 源文件），本目录解释「为什么这样建站、如何开发它、如何使用它」。
+区别于 `docs/`（对外发布的 13 份研究内容）和 `source/`（原始源文件），本目录解释「为什么这样建站、如何开发它、如何使用它」。
 
 > **金规则**：所有改动都走「本地编辑 → `git push` → CI 自动部署到 Cloudflare Pages」。详见 [03-开发文档 §0](./03-development.md) 与 [/CLAUDE.md](../CLAUDE.md)。
 
@@ -20,7 +20,7 @@
 
 ```
 LewisDocs/                     本地路径推荐：D:\Work\LewisDocs\
-├── source/                    源材料：V4 原始 11 份 Markdown（人工编辑）
+├── source/                    源材料：13 份原始 Markdown（人工编辑）
 ├── docs/                      VitePress 内容
 │   ├── *.md                   派生：由 source/ 自动生成（不可手改）
 │   ├── public/                源材料：robots.txt / ai.txt / _headers / 蜜罐

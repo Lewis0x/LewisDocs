@@ -353,7 +353,7 @@ obj.addProperty("App::PropertyEnumeration", "Type")
 | **SketchUp** | ❌ 不支持 Python（用 Ruby）| - |
 | **Onshape** | ❌ 不支持 Python（用 FeatureScript）| ⚠️ FeatureScript 等价物 |
 
-> **[评论]** 在 8 个样本平台中，FreeCAD 显示出较深的 Python 集成度。这与开源项目的特点相关——可以把脚本语言集成到平台基底而非限制在"插件层"，没有商业利益要保护的考虑。
+> **[评论]** 在 9 个样本平台中，FreeCAD 显示出较深的 Python 集成度。这与开源项目的特点相关——可以把脚本语言集成到平台基底而非限制在"插件层"，没有商业利益要保护的考虑。
 
 ---
 

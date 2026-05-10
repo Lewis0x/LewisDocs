@@ -31,6 +31,7 @@ DOC_ROUTES = {
     '3.6': '/platforms/solidworks',
     '3.7': '/platforms/sketchup',
     '3.8': '/platforms/freecad',
+    '3.9': '/platforms/bricscad',
 }
 
 DOC_FILES = {
@@ -42,6 +43,7 @@ DOC_FILES = {
     '3.6': 'platforms/solidworks.md',
     '3.7': 'platforms/sketchup.md',
     '3.8': 'platforms/freecad.md',
+    '3.9': 'platforms/bricscad.md',
 }
 
 

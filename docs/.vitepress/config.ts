@@ -22,7 +22,7 @@ const chineseTokenize = (text: string) => {
 
 export default withMermaid({
   title: '通用 CAD 平台 API 设计哲学',
-  description: '8 个主流 CAD 平台的 API 设计深度剖析、横向对比、理论框架',
+  description: '9 个主流 CAD 平台的 API 设计深度剖析、横向对比、理论框架',
   lang: 'zh-CN',
   // 部署目标：Cloudflare Pages，根路径 → base = '/'
   // 如回退到 GH Pages 子路径 https://lewis0x.github.io/LewisDocs/，改回 '/LewisDocs/'
@@ -84,6 +84,7 @@ export default withMermaid({
           { text: 'SolidWorks', link: '/platforms/solidworks' },
           { text: 'SketchUp', link: '/platforms/sketchup' },
           { text: 'FreeCAD', link: '/platforms/freecad' },
+          { text: 'BricsCAD (BRX + Qt/QML)', link: '/platforms/bricscad' },
         ],
       },
       { text: '术语表', link: '/glossary' },

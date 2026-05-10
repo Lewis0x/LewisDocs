@@ -2,7 +2,7 @@
 
 > 文档 2｜通用 CAD 平台 API 设计哲学系列
 >
-> **本文档定位**：横向比较 8 个主流 CAD 平台的 API 设计——AutoCAD ObjectARX / CATIA CAA / NX Open / Onshape / MicroStation+iTwin / SolidWorks / SketchUp Ruby / FreeCAD。建立全景对比矩阵，提炼跨平台共性模式，给出选型决策框架。
+> **本文档定位**：横向比较 9 个主流 CAD 平台的 API 设计——AutoCAD ObjectARX / CATIA CAA / NX Open / Onshape / MicroStation+iTwin / SolidWorks / SketchUp Ruby / FreeCAD / BricsCAD BRX。建立全景对比矩阵，提炼跨平台共性模式，给出选型决策框架。
 >
 > **与文档 3.x 的关系**：文档 3.x 系列对每个平台做单独深度剖析；本文档不重复细节，专注横向比较与归纳。读者可将本文档作为"全景导航"，需要详情时回查 3.x。
 
@@ -10,7 +10,7 @@
 
 ## 阅读约定
 
-- 来源标注：本文档的事实陈述基于文档 3.1-3.8 系列报告
+- 来源标注：本文档的事实陈述基于文档 3.1-3.9 系列报告
 - `> **[评论]**`：本报告作者对横向比较与模式归纳的判断，非任何厂商的官方陈述
 - ⚠️：勘误、强调或重要 caveat
 - ⭐：本文档作者认为最具学习价值的设计模式
@@ -21,11 +21,11 @@
 
 ## 重要前置说明
 
-本文档基于 8 个平台样本（5 个机械 CAD + 3 个 AEC/设计师），样本偏向参数化 CAD（5/8）。下文的"模式""趋势""独有设计"等归纳都是**对样本范围内的观察**，未覆盖 PTC Creo、Inventor、Solid Edge、Rhino+Grasshopper、BricsCAD、Revit、ArchiCAD 等其他重要平台。"较罕见""较少见""广泛使用"等表述均指样本范围。
+本文档基于 9 个平台样本（5 个机械 CAD + 3 个 AEC/设计师 + 1 个 DWG 兼容路径），样本偏向参数化 CAD（5/9）。下文的"模式""趋势""独有设计"等归纳都是**对样本范围内的观察**，未覆盖 PTC Creo、Inventor、Solid Edge、Rhino+Grasshopper、Revit、ArchiCAD 等其他重要平台。"较罕见""较少见""广泛使用"等表述均指样本范围。
 
 ---
 
-## TL;DR：8 个平台的一句话
+## TL;DR：9 个平台的一句话
 
 | # | 平台 | 一句话定位 |
 |---|---|---|
@@ -37,6 +37,7 @@
 | 3.6 | **SolidWorks** | COM Automation 单层架构刻意简化；IModelDocExtension 接口版本化的 COM 时代范式；面向中端工程师的"上手快、深度有限" |
 | 3.7 | **SketchUp Ruby** | 嵌入式脚本极简哲学的代表；17+ 类高粒度 [Observer](/glossary#observer-观察者模式)；Face-based 简化几何换性能；保守上云不破坏 Ruby 生态 |
 | 3.8 | **FreeCAD** | 开源参数化 CAD 讨论中最常被引用的平台之一；App/Gui 严格 MVC 分离；Python 集成较深（FeaturePython）；22 年才到 1.0 的工程治理节奏值得关注 |
+| 3.9 | **BricsCAD (BRX + Qt/QML)** | 样本中唯一以"ARX 源码兼容"为核心战略的非 Autodesk 平台；ACIS 内核（Spatial）+ ODA Drawings SDK；2021-2022 起 wxWidgets/MFC → Qt/QML 渐进迁移（约 50 人年）；Hexagon (2018+) → Octave (2025+) |
 
 ---
 
@@ -59,15 +60,21 @@
 │ - MicroStation + iTwin（Bentley，基础设施工程）             │
 │ - SketchUp        （Trimble，景观/室内/概念设计）            │
 └─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ DWG 兼容路径（与 AutoCAD 源码 / 文件格式互通）               │
+│ - BricsCAD        （Hexagon → Octave，多产品线 Lite/Pro/   │
+│                     BIM/Mechanical/Ultimate；ARX 源码兼容）  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-⚠️ 边界并非绝对——AutoCAD 也用于机械（Mechanical Toolset）；CATIA 也用于建筑（Frank Gehry 等）。但主战场清晰。
+⚠️ 边界并非绝对——AutoCAD 也用于机械（Mechanical Toolset）；CATIA 也用于建筑（Frank Gehry 等）；BricsCAD 通过 Mechanical / BIM 模块跨入机械与 BIM 领域。但主战场清晰。
 
 ### 1.2 按 API 风格分类
 
 ```
 in-process 原生 C++ SDK
 ├── AutoCAD ObjectARX        - C++ + .NET wrapper
+├── BricsCAD BRX             - C++ + .NET（与 ARX 源码兼容，二进制隔离）⭐
 ├── CATIA CAA RADE           - C++ + Authorized/Internal 边界
 ├── MicroStationAPI          - C++ + DgnPlatformNET
 └── FreeCAD (App + Workbench) - C++ + Python 双向
@@ -160,20 +167,20 @@ REST API + 领域语言
 
 ### 2.1 主对比表
 
-| 维度 | AutoCAD | CATIA | NX | Onshape | MicroStation+iTwin | SolidWorks | SketchUp | FreeCAD |
-|---|---|---|---|---|---|---|---|---|
-| **诞生年份** | 1982 | 1977 | 1972 (UNIAPT) | 2012 | 1985 (V1) | 1995 | 2000 | 2002 |
-| **拥有者** | Autodesk | Dassault Systèmes | Siemens | PTC | Bentley | Dassault Systèmes | Trimble | FPA（非营利）|
-| **主 API 语言** | C++ + .NET | C++ | C++/C#/Java/Python/VB | TypeScript REST + FeatureScript | C++/.NET/Python | COM (VBA/C#) | Ruby | Python + C++ |
-| **几何内核** | 自研 (AcGe) | 自研 (CGM) | Parasolid | Parasolid 衍生 | 自研抽象层 | Parasolid | Face-based | OCCT |
-| **API 风格** | in-process 原生 | in-process 原生 + 严格组件 | Common API 多语言对等 | REST + 领域语言 | in-process 多代并存 | COM 单层 | 嵌入式脚本 | Python 平台基底 |
-| **Custom Entity** | ✅ | ✅ (Late Type) | ✅ (Common API) | ✅ (FeatureScript) | ✅ (ECClass) | ❌ | ❌ | ✅ (FeaturePython) |
-| **强类型 schema** | ❌ | ✅ (Knowledge Adv.) | ✅ (KF) | ✅ (FeatureScript) | ⭐ ECSchema/BIS | 部分 | ❌ | 强 Property 类型 |
-| **云原生** | APS Design Automation | 3DEXPERIENCE | NX X (2024) | ⭐ 100% 云原生 | iTwin (开源) | 3DEXPERIENCE Works | Web 版不含 Ruby | 无 |
-| **协作模式** | 文件锁 + ACC | ENOVIA / 3DEXPERIENCE | Teamcenter | ⭐ Git 式 branching | iModel ChangeSet | PDM / 3DEXPERIENCE | 文件 + Trimble Connect | 文件 |
-| **学习曲线** | 中-高 | 极高 | 高 | 中 | 高 | 中 | ⭐ 低 | 中 |
-| **AI 整合（2025-2026）**| Smart Blocks (2026) | ENOVIA Aura | NX 2024 AI | 暂无明显 | 待发展 | Aura AI (2026) | AI Render (2026.1) | 无 |
-| **价格档次** | 中（订阅）| 极高 | 极高 | 中（订阅）| 高 | 中 | 中 | 免费 |
+| 维度 | AutoCAD | CATIA | NX | Onshape | MicroStation+iTwin | SolidWorks | SketchUp | FreeCAD | BricsCAD |
+|---|---|---|---|---|---|---|---|---|---|
+| **诞生年份** | 1982 | 1977 | 1972 (UNIAPT) | 2012 | 1985 (V1) | 1995 | 2000 | 2002 | 2002 |
+| **拥有者** | Autodesk | Dassault Systèmes | Siemens | PTC | Bentley | Dassault Systèmes | Trimble | FPA（非营利）| Hexagon → Octave (2025+) |
+| **主 API 语言** | C++ + .NET | C++ | C++/C#/Java/Python/VB | TypeScript REST + FeatureScript | C++/.NET/Python | COM (VBA/C#) | Ruby | Python + C++ | C++ + .NET（与 ARX 源码兼容）|
+| **几何内核** | 自研 (AcGe) | 自研 (CGM) | Parasolid | Parasolid 衍生 | 自研抽象层 | Parasolid | Face-based | OCCT | ACIS（Spatial / DS）|
+| **API 风格** | in-process 原生 | in-process 原生 + 严格组件 | Common API 多语言对等 | REST + 领域语言 | in-process 多代并存 | COM 单层 | 嵌入式脚本 | Python 平台基底 | in-process 原生（BRX = ARX 兼容）|
+| **Custom Entity** | ✅ | ✅ (Late Type) | ✅ (Common API) | ✅ (FeatureScript) | ✅ (ECClass) | ❌ | ❌ | ✅ (FeaturePython) | ✅（与 ARX Custom Entity 兼容）|
+| **强类型 schema** | ❌ | ✅ (Knowledge Adv.) | ✅ (KF) | ✅ (FeatureScript) | ⭐ ECSchema/BIS | 部分 | ❌ | 强 Property 类型 | ❌（与 ARX 同）|
+| **云原生** | APS Design Automation | 3DEXPERIENCE | NX X (2024) | ⭐ 100% 云原生 | iTwin (开源) | 3DEXPERIENCE Works | Web 版不含 Ruby | 无 | Bricsys 24/7（云协作 + 轻量 Web 查看）|
+| **协作模式** | 文件锁 + ACC | ENOVIA / 3DEXPERIENCE | Teamcenter | ⭐ Git 式 branching | iModel ChangeSet | PDM / 3DEXPERIENCE | 文件 + Trimble Connect | 文件 | 文件 + Bricsys 24/7 |
+| **学习曲线** | 中-高 | 极高 | 高 | 中 | 高 | 中 | ⭐ 低 | 中 | 中（ARX 经验可直接复用）|
+| **AI 整合（2025-2026）**| Smart Blocks (2026) | ENOVIA Aura | NX 2024 AI | 暂无明显 | 待发展 | Aura AI (2026) | AI Render (2026.1) | 无 | BricsCAD BIM AI（Hexagon 集团协同）|
+| **价格档次** | 中（订阅）| 极高 | 极高 | 中（订阅）| 高 | 中 | 中 | 免费 | 中（永久授权可选 ⭐）|
 
 ### 2.2 API 入口对象对比
 
@@ -187,6 +194,7 @@ REST API + 领域语言
 | SolidWorks | `SldWorks.Application`（COM）| `IModelDoc2`（Part/Assembly/Drawing）|
 | SketchUp | `Sketchup` 模块 + `Sketchup.active_model` | `Sketchup::Model` 含 `entities`/`materials` 等 |
 | FreeCAD | `FreeCAD` 模块 + `FreeCADGui` 模块 | `App.Document` 含 DocumentObject 列表 |
+| BricsCAD | `acedGetCurDwg()` (BRX C++) / `Bricscad.ApplicationServices.Application` (.NET) | `AcDbDatabase`（与 ARX 同名同结构）|
 
 ### 2.3 选择对象 / 角色化机制对比
 
@@ -200,16 +208,17 @@ REST API + 领域语言
 | SolidWorks | `SelectByID2` + **mark 整数** | COM 时代实用 | 散落式知识点，不直观 ⚠️ |
 | SketchUp | 直接 entity 引用 + Tool 类的 InputPoint | 设计师友好 | 不适合复杂角色 |
 | FreeCAD | PropertyLink / PropertyLinkSub | 显式持久化引用 | 需理解 ElementMap 机制 |
+| BricsCAD | ObjectId + 数组传参（与 ARX 兼容）| ARX 同源，源码可移植 | 同 ARX：无角色信息 |
 
 ---
 
 ## 三、跨平台共性模式提炼
 
-> **[本节适用边界（前置）]** 本节的"模式 A-F"是从 8 个样本平台归纳出的共性，反映样本中观察到的设计取向。不在样本中的平台（PTC Creo、Inventor、Rhino 等）可能存在不同模式。本节模式应被理解为**思考清单**，不是普遍规律。
+> **[本节适用边界（前置）]** 本节的"模式 A-F"是从 9 个样本平台归纳出的共性，反映样本中观察到的设计取向。不在样本中的平台（PTC Creo、Inventor、Rhino 等）可能存在不同模式。本节模式应被理解为**思考清单**，不是普遍规律。
 
 ### 3.1 模式 A：分层 API 服务多类开发者
 
-样本中 7/8 平台采用某种形式的分层 API（Onshape 是例外，单层 REST + FeatureScript）。
+样本中 8/9 平台采用某种形式的分层 API（Onshape 是例外，单层 REST + FeatureScript）。
 
 最经典实现：AutoCAD 的"六层金字塔"[回链：3.1 §二 API 整体架构：六层金字塔]：
 
@@ -344,13 +353,13 @@ FreeCAD (FeaturePython)→ execute() 重计算回调
 - 不是真正的同步协作
 ```
 
-⭐ **观察**：在本系列覆盖的 8 个样本中，Onshape 是较少见的实现完整 Git 式 CAD 协作的平台 [回链：3.4 §三 git 式四层数据模型]。Bentley iTwin 的 ChangeSet 接近但仍是线性。商业 CAD 主流仍是 PDM check-out/check-in。
+⭐ **观察**：在本系列覆盖的 9 个样本中，Onshape 是较少见的实现完整 Git 式 CAD 协作的平台 [回链：3.4 §三 git 式四层数据模型]。Bentley iTwin 的 ChangeSet 接近但仍是线性。商业 CAD 主流仍是 PDM check-out/check-in。
 
 ---
 
 ## 四、各平台独有设计参考
 
-> ⚠️ **章节定位说明**：下文所列设计是**在本系列 8 个样本平台的对比中**未观察到等价物的设计选择，不代表"在所有 CAD 平台中绝无仅有"——其他未覆盖平台（PTC Creo、Inventor、Rhino+Grasshopper 等）可能存在等价或类似设计。
+> ⚠️ **章节定位说明**：下文所列设计是**在本系列 9 个样本平台的对比中**未观察到等价物的设计选择，不代表"在所有 CAD 平台中绝无仅有"——其他未覆盖平台（PTC Creo、Inventor、Rhino+Grasshopper 等）可能存在等价或类似设计。
 
 下面列出每个平台**在样本中较罕见**的设计决策——其他样本平台没有等价物：
 
@@ -627,7 +636,7 @@ CAD API 设计常常反映客户基础与商业战略 [回链：3.2 §五 Author
 
 ## Caveats
 
-- **8 个平台的选择**：覆盖了机械（CATIA/NX/SolidWorks/Onshape/FreeCAD）+ AEC（AutoCAD/MicroStation/SketchUp）的主流主力。**未覆盖**的重要平台包括：PTC Creo（与 Onshape 同公司但定位不同）、Autodesk Inventor、Solid Edge（与 NX 同公司）、Rhino + Grasshopper（参数化建模独门）、BricsCAD（DWG 兼容路径）、Revit（BIM 主流）、ArchiCAD（建筑 BIM）。本文档若有续篇可补充。
+- **9 个平台的选择**：覆盖了机械（CATIA/NX/SolidWorks/Onshape/FreeCAD）+ AEC（AutoCAD/MicroStation/SketchUp）+ DWG 兼容路径（BricsCAD）的主流主力。**未覆盖**的重要平台包括：PTC Creo（与 Onshape 同公司但定位不同）、Autodesk Inventor、Solid Edge（与 NX 同公司）、Rhino + Grasshopper（参数化建模独门）、Revit（BIM 主流）、ArchiCAD（建筑 BIM）。本文档若有续篇可补充。
 - **行业边界并非绝对**：AutoCAD 在机械（Mechanical Toolset）、CATIA 在建筑（Frank Gehry）等存在领域跨越。
 - **演进观察的不确定性**：第 7 部分的趋势观察基于 2024-2026 公开信息，未来 5-10 年情况可能改变。
 - **市场份额数据**：本文档未引用具体市场份额数据，所有"主流地位"判断属社区观察与行业共识。

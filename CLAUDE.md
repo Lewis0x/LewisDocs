@@ -69,7 +69,7 @@ Full methodology: `project-docs/05-annotation-methodology.md`.
 
 | Type | Path | When you edit |
 |---|---|---|
-| Source content | `source/*.md` | Updating the 11 V4 research documents (incl. `术语表-V4.md` glossary) |
+| Source content | `source/*.md` | Updating the 13 research documents (9 platform deep-dives 3.1-3.9 + 文档 0/1/2/4 + 术语表) |
 | Site config | `docs/.vitepress/config.ts` | Nav / sidebar / search / Mermaid / head meta |
 | Theme | `docs/.vitepress/theme/` | Custom Vue components (`components/`), `custom.css`, `index.ts` |
 | Public assets | `docs/public/` | `robots.txt`, `ai.txt`, `_headers`, `_honeypot/` |
@@ -115,7 +115,7 @@ Use `npm run build:no-watermark` for local debugging only; never commit/deploy w
 
 ## Architecture in 30 seconds
 
-- VitePress 1.5+ static site (with `vitepress-plugin-mermaid` for diagrams), source = 11 V4 Markdown research docs (~174k 字)
+- VitePress 1.5+ static site (with `vitepress-plugin-mermaid` for diagrams), source = 13 Markdown research docs (~205k 字; 9 platform deep-dives + theory + comparison + UI study + glossary + index)
 - Search = local index, Chinese tokenized via `Intl.Segmenter` (browser) / regex fallback (build-time Node)
 - Hosted on **Cloudflare Pages** (project name: `lewisdocs`, URL: `https://lewisdocs.pages.dev/`)
 - CI = **GitHub Actions** (`.github/workflows/cloudflare-pages.yml`); concurrency group `cloudflare-pages`
