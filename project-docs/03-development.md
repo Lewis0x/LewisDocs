@@ -98,7 +98,7 @@ cad-api-docs/
 │   ├── comparison.md              # ⚠️ 自动生成（来自 source/文档2）
 │   └── platforms/*.md             # ⚠️ 自动生成（来自 source/3.x）
 ├── source/                        # ✅ 真实可改的源
-│   └── (11 份 V4 .md)
+│   └── (13 份 .md：12 份原 V4 后缀 + 文档 4 新格式)
 ├── scripts/
 │   ├── import_docs.py             # source/ → docs/，加 frontmatter
 │   └── rewrite_links.py           # docs/ 中改写 [回链：…]
