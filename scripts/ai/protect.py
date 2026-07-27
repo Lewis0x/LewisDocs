@@ -14,6 +14,12 @@ from scripts.ai.errors import AIAgentError, ErrorCode
 _TOKEN_TEMPLATE: Final = "⟦LEWISDOCS_{index:04d}⟧"  # noqa: S105
 _TOKEN_RE: Final = re.compile(r"⟦LEWISDOCS_\d{4}⟧")
 _FAILURE_MESSAGE: Final = "translation validation failed"
+_OUTER_MARKDOWN_FENCE_START: Final = r"\A[ \t\r\n]*(?P<mark>`{3,}|~{3,})(?:markdown|md)[ \t]*\r?\n"
+_OUTER_MARKDOWN_FENCE_END: Final = r"(?P<body>.*)\r?\n(?P=mark)[ \t\r\n]*\Z"
+_OUTER_MARKDOWN_FENCE_RE: Final = re.compile(
+    f"{_OUTER_MARKDOWN_FENCE_START}{_OUTER_MARKDOWN_FENCE_END}",
+    re.IGNORECASE | re.DOTALL,
+)
 
 _FENCE_RE: Final = re.compile(r"(?ms)^(?P<mark>`{3,}|~{3,})[^\n]*\n.*?^(?P=mark)[ \t]*(?:\n|$)")
 _INLINE_CODE_RE: Final = re.compile(r"`[^`\n]+`")
@@ -87,6 +93,7 @@ def restore_and_validate(
     translated: str,
 ) -> str:
     """Restore literals after checking tokens and Markdown structure."""
+    translated = _unwrap_outer_markdown_fence(translated)
     expected_tokens = tuple(span.placeholder for span in protected.spans)
     found_tokens = tuple(_TOKEN_RE.findall(translated))
     if found_tokens != expected_tokens:
@@ -101,6 +108,11 @@ def restore_and_validate(
     if _literal_signature(source) != _literal_signature(restored):
         _fail()
     return restored
+
+
+def _unwrap_outer_markdown_fence(translated: str) -> str:
+    match = _OUTER_MARKDOWN_FENCE_RE.fullmatch(translated)
+    return match.group("body") if match is not None else translated
 
 
 def _select_matches(markdown: str) -> tuple[Match, ...]:
