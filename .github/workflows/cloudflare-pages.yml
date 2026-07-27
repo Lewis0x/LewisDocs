@@ -11,6 +11,13 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # GITHUB_TOKEN pushes do not trigger push workflows, so deploy after a
+  # successful handbook sync explicitly.
+  # https://docs.github.com/en/actions/concepts/security/github_token
+  workflow_run:
+    workflows: ["Sync public AI handbook"]
+    types: [completed]
+    branches: [main]
 
 permissions:
   contents: read
@@ -22,6 +29,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -32,6 +40,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0  # lastUpdated 需要完整 git 历史
 
       - name: Setup Node
@@ -52,7 +61,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: docs/.vitepress/cache
-          key: ${{ runner.os }}-vitepress-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('source/**/*.md', 'docs/**/*.md', 'docs/.vitepress/**/*.{ts,js,css}') }}
+          key: ${{ runner.os }}-vitepress-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('source/**/*.md', 'source-ai/content/**/*.md', 'docs/**/*.md', 'docs/.vitepress/**/*.{ts,js,css}') }}
           restore-keys: |
             ${{ runner.os }}-vitepress-${{ hashFiles('**/package-lock.json') }}-
             ${{ runner.os }}-vitepress-
