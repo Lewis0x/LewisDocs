@@ -11,7 +11,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from shutil import which
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, cast
 
 import httpx2
 import pytest
@@ -39,6 +39,7 @@ MARKDOWN: Final = (
 )
 FAILURE_MESSAGE: Final = "translation failed"
 ENDPOINT: Final = "https://api.kimi.com/coding/v1/chat/completions"
+EXPECTED_TRANSLATION_READ_TIMEOUT: Final = 900.0
 
 BAD_RESPONSES: Final[tuple[bytes, ...]] = (
     b"not json",
@@ -118,14 +119,16 @@ def _json_response(request: httpx2.Request, content: str) -> httpx2.Response:
 def test_boundary_models_are_frozen_and_validate_required_shapes() -> None:
     """Accept the fixed request and standard response while rejecting bad shapes."""
     request = KimiRequest(
-        model="kimi-for-coding",
+        model="k3",
+        reasoning_effort="low",
         messages=(
             KimiMessage(role="system", content="system"),
             KimiMessage(role="user", content="user"),
         ),
     )
     assert request.model_dump(mode="json") == {  # noqa: S101
-        "model": "kimi-for-coding",
+        "model": "k3",
+        "reasoning_effort": "low",
         "messages": [
             {"role": "system", "content": "system"},
             {"role": "user", "content": "user"},
@@ -162,6 +165,8 @@ def test_translate_posts_exact_wire_and_restores_protected_literals(
     observations: list[ObservedRequest] = []
 
     def handler(request: httpx2.Request) -> httpx2.Response:
+        timeout = cast("dict[str, float]", request.extensions["timeout"])
+        assert timeout["read"] == EXPECTED_TRANSLATION_READ_TIMEOUT  # noqa: S101
         raw_body = request.content.decode("utf-8")
         observations.append(
             ObservedRequest(
@@ -190,7 +195,8 @@ def test_translate_posts_exact_wire_and_restores_protected_literals(
     assert observed.method == "POST"  # noqa: S101
     assert observed.url == ENDPOINT  # noqa: S101
     assert observed.authorization_ok  # noqa: S101
-    assert observed.payload.model == "kimi-for-coding"  # noqa: S101
+    assert observed.payload.model == "k3"  # noqa: S101
+    assert observed.payload.reasoning_effort == "low"  # noqa: S101
     assert observed.payload.messages[0].role == "system"  # noqa: S101
     assert observed.payload.messages[1].role == "user"  # noqa: S101
     assert observed.payload.messages[1].content == protected.text  # noqa: S101
@@ -202,7 +208,6 @@ def test_translate_posts_exact_wire_and_restores_protected_literals(
             '"n"',
             "presence_penalty",
             "frequency_penalty",
-            "reasoning_effort",
         )
     )
     assert "# 合成手册" in result  # noqa: S101

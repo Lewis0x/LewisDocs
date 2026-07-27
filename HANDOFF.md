@@ -35,7 +35,7 @@ The command always targets `source-ai/content`; callers do not set
 `AI_CONTENT_ROOT`. A real update requires `MOONSHOT_API_KEY` in the current process
 only when one or more upstream pages changed. The legacy variable and repository
 secret name contain a Kimi Code Console key used with
-`https://api.kimi.com/coding/v1`.
+`https://api.kimi.com/coding/v1` and model `k3`.
 
 The two learning paths are maintained by the team. Synchronization validates them
 but does not overwrite them.
@@ -59,6 +59,9 @@ commit `docs/ai`; it remains generated VitePress input.
 2. synchronizes the fixed public content directory;
 3. prepares and verifies the complete public site;
 4. commits only `source-ai/content` back to the selected branch when bytes changed.
+
+Translation requests use a 15-minute read timeout, while the complete manual job
+has a 120-minute limit to accommodate long Kimi Code responses.
 
 The Cloudflare Pages workflow listens for a successful handbook-sync completion
 and then deploys the latest `main`. This explicit workflow handoff is required
