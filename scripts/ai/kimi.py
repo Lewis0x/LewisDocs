@@ -286,8 +286,13 @@ def _post_with_rate_limit_retry(
 
 
 def _is_transient_rate_limit(response: httpx2.Response) -> bool:
-    content = response.content.lower()
-    return response.status_code == _RATE_LIMIT_STATUS and any(
+    if response.status_code != _RATE_LIMIT_STATUS:
+        return False
+    try:
+        content = response.read().lower()
+    except httpx2.HTTPError:
+        return False
+    return any(
         marker in content for marker in _TRANSIENT_RATE_LIMIT_MARKERS
     )
 

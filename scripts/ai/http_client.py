@@ -19,6 +19,7 @@ _DEFAULT_LIMITS = httpx2.Limits(
 
 def _raise_for_non_success(response: httpx2.Response) -> None:
     if response.is_error:
+        _ = response.read()
         _ = response.raise_for_status()
 
 

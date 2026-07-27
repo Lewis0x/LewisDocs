@@ -170,6 +170,21 @@ def test_chinese_render_has_warning_official_attribution_and_translated_title(
     assert "endorsed" not in page.body.lower()  # noqa: S101
 
 
+def test_chinese_render_records_supported_alternate_translation_model(tmp_path: Path) -> None:
+    """Record GLM attribution without weakening accepted-page metadata."""
+    source = MANIFEST.root[0]
+    path = tmp_path / "page.md"
+    _ = path.write_bytes(
+        render_chinese_page(
+            _normalized(source),
+            _translated(source),
+            translation_model="glm-5.2",
+        )
+    )
+
+    assert parse_accepted_page(path).translation_model == "glm-5.2"  # noqa: S101
+
+
 def test_chinese_render_rejects_missing_translated_h1() -> None:
     """Given translated text without an H1, rendering fails at the page boundary."""
     with pytest.raises(AIAgentError) as exc_info:
