@@ -38,7 +38,7 @@ MARKDOWN: Final = (
     "# Synthetic handbook\n\nRun `npm run ai:sync` against https://example.test/docs\n"
 )
 FAILURE_MESSAGE: Final = "translation failed"
-ENDPOINT: Final = "https://api.moonshot.ai/v1/chat/completions"
+ENDPOINT: Final = "https://api.moonshot.cn/v1/chat/completions"
 
 BAD_RESPONSES: Final[tuple[bytes, ...]] = (
     b"not json",

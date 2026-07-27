@@ -22,7 +22,9 @@ from scripts.ai.protect import protect_markdown, restore_and_validate
 if TYPE_CHECKING:
     from scripts.ai.types import SourceId
 
-_ENDPOINT: Final = "https://api.moonshot.ai/v1/chat/completions"
+# China-platform keys require the matching regional endpoint.
+# https://platform.kimi.com/docs/api/overview
+_ENDPOINT: Final = "https://api.moonshot.cn/v1/chat/completions"
 _SYSTEM_PROMPT: Final = (
     "你必须只输出中文 Markdown, 并保持原文结构与占位符令牌不变, 不得修改格式、标点或保护段落。"
 )
