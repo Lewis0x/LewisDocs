@@ -35,6 +35,9 @@ class TranslationFailureReason(StrEnum):
     RESPONSE_INVALID = "response_invalid"
     OUTPUT_INVALID = "output_invalid"
     OUTPUT_TOKEN_INVALID = "output_token_invalid"  # noqa: S105
+    OUTPUT_TOKEN_MISSING = "output_token_missing"  # noqa: S105
+    OUTPUT_TOKEN_UNEXPECTED = "output_token_unexpected"  # noqa: S105
+    OUTPUT_TOKEN_REORDERED = "output_token_reordered"  # noqa: S105
     OUTPUT_STRUCTURE_INVALID = "output_structure_invalid"
     OUTPUT_LITERAL_INVALID = "output_literal_invalid"
 

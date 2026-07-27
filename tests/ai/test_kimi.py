@@ -254,7 +254,7 @@ def test_translate_maps_http_transport_and_restore_failures() -> None:
 
     _assert_translation_failed(
         lambda: _call(httpx2.MockTransport(missing_token), api_key),
-        "output_token_invalid",
+        "output_token_missing",
     )
 
     def non_success(request: httpx2.Request) -> httpx2.Response:

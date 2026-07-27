@@ -209,11 +209,17 @@ def test_restore_rejects_token_mutations(mutation: str) -> None:
         translated = translated.replace(second, first, 1).replace("TEMP", second, 1)
     else:
         translated = protected.text + "@@LEWISDOCS_9999@@"
+    expected_reason = {
+        "missing": TranslationFailureReason.OUTPUT_TOKEN_MISSING,
+        "duplicate": TranslationFailureReason.OUTPUT_TOKEN_UNEXPECTED,
+        "reordered": TranslationFailureReason.OUTPUT_TOKEN_REORDERED,
+        "unknown": TranslationFailureReason.OUTPUT_TOKEN_UNEXPECTED,
+    }[mutation]
     _assert_translation_failure(
         source,
         protected,
         translated,
-        TranslationFailureReason.OUTPUT_TOKEN_INVALID,
+        expected_reason,
     )
 
 
