@@ -28,7 +28,7 @@ _PATH_RE: Final = re.compile(r"(?:\.{0,2}/|/)[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]*[
 _FILE_EXTENSIONS: Final = "cfg|css|html|ini|js|json|md|png|py|sh|svg|toml|ts|tsx|txt|yaml|yml"
 _FILENAME_RE: Final = re.compile(rf"\b[A-Za-z0-9_.-]+\.(?:{_FILE_EXTENSIONS})\b")
 _KNOWN_NAME_RE: Final = re.compile(
-    r"(?:Claude Code|Codex CLI|Kimi Code|Moonshot API|kimi-for-coding|kimi-k3)"
+    r"(?:Claude Code|Codex CLI|Kimi Code|Moonshot API|kimi-for-coding|kimi-k3|k3)"
 )
 
 _HEADING_RE: Final = re.compile(r"^(#{1,6})\s+")

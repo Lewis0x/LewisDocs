@@ -152,9 +152,9 @@ def test_protects_product_api_and_config_identifiers() -> None:
 def test_protects_active_translation_model_name() -> None:
     """Protect the exact model identifier used in accepted-page metadata."""
     _assert_protection(
-        "Use kimi-for-coding",
+        "Use k3",
         "Use ⟦LEWISDOCS_0000⟧",
-        ("kimi-for-coding",),
+        ("k3",),
     )
 
 
