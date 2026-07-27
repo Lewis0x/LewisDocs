@@ -5,7 +5,7 @@ product: codex
 lang: en
 canonical_url: https://developers.openai.com/codex/ide
 owner: OpenAI
-content_sha256: 6214f037944f6a4069f2b6f0322522ab5785810696673833f0192ba8ff84d194
+content_sha256: d57e2af6ef1d146b12eeb4b5c8d4750d7adb687a6ae0ad5a92406ce1c4ab38c3
 ---
 [Official source](https://developers.openai.com/codex/ide)
 
@@ -43,7 +43,7 @@ Keep quick iterations local, or connect Codex web when a task needs more time an
 
 Quickstart
 
-##  Get started in your IDE 
+## Get started in your IDE
 
  Install or enable Codex, sign in, and start a chat with the context already open in your editor. 
 
@@ -120,8 +120,6 @@ Learn more
 
 
 Continue inWork locallyCloudopenai/developers-website
-
-## 
 
 Use Codex IDE extension when…
 

@@ -5,7 +5,7 @@ product: codex
 lang: zh-CN
 canonical_url: https://learn.chatgpt.com/docs/codex/cli
 owner: OpenAI
-content_sha256: 5e23750a4f8787e509627f1b11d16da1a4bf5a89d0938df98855f61081a2071d
+content_sha256: 9895e4936d78754402c57247657cd2c46752bde97d694b9c6c95ff7c15429d58
 translation_of: codex/cli
 translation_model: glm-5.2
 ai_translated: true
@@ -77,7 +77,7 @@ Codex CLI
 
 快速入门
 
-##  开始使用 Codex CLI
+## 开始使用 Codex CLI
 
  安装 Codex、登录，并从项目目录运行您的第一个任务。
 
@@ -139,8 +139,6 @@ zsh — plugins插件从可用的市场浏览插件。已安装 1751 个可用�
 
 选择审查预设›1.针对基础分支进行审查(PR 风格)2.审查未提交的更改3.审查提交4.自定义审查说明
 
-##
-
 围绕 Codex 构建终端工作流
 
 
@@ -165,8 +163,6 @@ zsh — plugins插件从可用的市场浏览插件。已安装 1751 个可用�
  07 ` /permissions ` 为每次运行设定边界  选择 Codex 何时可以在未经询问的情况下编辑文件或运行命令，并在继续之前检查活动沙盒和可写根目录。
 
  08 ` codex completion ` 让 Codex 适配你的终端  为你的 shell 生成补全，选择语法主题，并在由 VISUAL 或 EDITOR 配置的编辑器中打开较长的提示词。
-
-##
 
 当你……时使用 Codex CLI
 

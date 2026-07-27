@@ -78,9 +78,11 @@ def _render_block(node: _Node, *, list_depth: int) -> str:  # noqa: PLR0911
     if node.tag is None:
         return node.text
     if node.tag == "h1":
-        return f"# {_render_inline(node.children)}"
+        heading = _render_inline(node.children).strip()
+        return f"# {heading}" if heading else ""
     if node.tag == "h2":
-        return f"## {_render_inline(node.children)}"
+        heading = _render_inline(node.children).strip()
+        return f"## {heading}" if heading else ""
     if node.tag == "p":
         return _render_inline(node.children)
     if node.tag in {"ul", "ol"}:

@@ -533,6 +533,23 @@ def test_normalize_html_prepends_manifest_title_when_article_has_no_h1() -> None
     assert normalized.markdown == f"# {source.title}\n\nFull guide body.\n"  # noqa: S101
 
 
+def test_normalize_html_trims_headings_and_drops_empty_headings() -> None:
+    """Remove component whitespace and empty icon-only headings from HTML guides."""
+    source = _source_by_fetch_format("html")
+    raw = (
+        '<html><body><article id="mainContent">'
+        "<h1> Guide title </h1><h2> Setup </h2><h2><span></span></h2><p>Body.</p>"
+        "</article></body></html>"
+    )
+
+    normalized = normalize_source(
+        source=source,
+        fetched=_fetched_page(source, raw, content_type="text/html"),
+    )
+
+    assert normalized.markdown == "# Guide title\n\n## Setup\n\nBody.\n"  # noqa: S101
+
+
 def test_normalize_html_sibling_noise_absent() -> None:
     """Ensure sibling nav/footer/script/style are never included in article extraction."""
     source = _source_by_fetch_format("html")

@@ -5,7 +5,7 @@ product: codex
 lang: en
 canonical_url: https://developers.openai.com/codex/cloud
 owner: OpenAI
-content_sha256: 53245e741b261de0b96c08e16f532363a93389aff93b0ecf129b5a81bc457ccd
+content_sha256: ab3267843a1c7b0565eeaa04ed4dac05a01d9212fbfc5a6964388f5b65d89288
 ---
 [Official source](https://developers.openai.com/codex/cloud)
 
@@ -43,7 +43,7 @@ Inspect the summary and diff, request a follow-up, or open a pull request when t
 
 Quickstart
 
-##  Set up Codex cloud 
+## Set up Codex cloud
 
  Connect GitHub, create an environment, and start your first cloud chat. 
 
@@ -110,8 +110,6 @@ Learn more
 
 
 GitHubPull requests and issuesLinearIssues and commentsSlackChannels and threads
-
-## 
 
 Use Codex cloud when…
 
