@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 _ENDPOINT: Final = "https://api.kimi.com/coding/v1/chat/completions"
 _SERVER_ERROR_MIN_STATUS: Final = 500
 _MAX_TRANSLATION_CHARS: Final = 10_000
+_MIN_TRANSLATION_CHARS: Final = 1_000
 _TRANSLATION_TIMEOUT: Final = httpx2.Timeout(
     connect=10.0,
     read=900.0,
@@ -40,6 +41,17 @@ _SYSTEM_PROMPT: Final = (
     "不得移动任何 @@LEWISDOCS_0000@@ 令牌, 不得修改格式、标点或保护段落。"
 )
 _TRANSLATION_FAILED_MESSAGE: Final = "translation failed"
+_RETRYABLE_OUTPUT_REASONS: Final = frozenset(
+    {
+        TranslationFailureReason.OUTPUT_INVALID,
+        TranslationFailureReason.OUTPUT_TOKEN_INVALID,
+        TranslationFailureReason.OUTPUT_TOKEN_MISSING,
+        TranslationFailureReason.OUTPUT_TOKEN_UNEXPECTED,
+        TranslationFailureReason.OUTPUT_TOKEN_REORDERED,
+        TranslationFailureReason.OUTPUT_STRUCTURE_INVALID,
+        TranslationFailureReason.OUTPUT_LITERAL_INVALID,
+    }
+)
 
 
 class KimiMessage(BaseModel):
@@ -146,27 +158,9 @@ def translate_markdown(client: httpx2.Client, request: TranslationInput) -> str:
     try:
         translated: list[str] = []
         for chunk in _translation_chunks(protected):
-            payload = KimiRequest(
-                model="k3",
-                reasoning_effort="low",
-                messages=(
-                    KimiMessage(role="system", content=_SYSTEM_PROMPT),
-                    KimiMessage(role="user", content=chunk.protected.text),
-                ),
-            )
-            response = client.post(
-                _ENDPOINT,
-                headers={"Authorization": auth},
-                json=payload.model_dump(mode="json"),
-                timeout=_TRANSLATION_TIMEOUT,
-            )
-            _ = response.raise_for_status()
-            completion = (
-                KimiResponse.model_validate_json(response.content).choices[0].message.content
-            )
             translated.extend(
                 (
-                    restore_and_validate(chunk.source, chunk.protected, completion),
+                    _translate_chunk(client, chunk, auth),
                     chunk.separator,
                 )
             )
@@ -193,9 +187,57 @@ def translate_markdown(client: httpx2.Client, request: TranslationInput) -> str:
         )
 
 
-def _translation_chunks(protected: ProtectedMarkdown) -> tuple[_TranslationChunk, ...]:
+def _translate_chunk(
+    client: httpx2.Client,
+    chunk: _TranslationChunk,
+    auth: str,
+) -> str:
+    payload = KimiRequest(
+        model="k3",
+        reasoning_effort="low",
+        messages=(
+            KimiMessage(role="system", content=_SYSTEM_PROMPT),
+            KimiMessage(role="user", content=chunk.protected.text),
+        ),
+    )
+    response = client.post(
+        _ENDPOINT,
+        headers={"Authorization": auth},
+        json=payload.model_dump(mode="json"),
+        timeout=_TRANSLATION_TIMEOUT,
+    )
+    _ = response.raise_for_status()
+    completion = KimiResponse.model_validate_json(response.content).choices[0].message.content
+
+    try:
+        return restore_and_validate(chunk.source, chunk.protected, completion)
+    except AIAgentError as error:
+        if (
+            error.reason not in _RETRYABLE_OUTPUT_REASONS
+            or len(chunk.protected.text) <= _MIN_TRANSLATION_CHARS
+        ):
+            raise
+
+        retry_max_chars = max(
+            _MIN_TRANSLATION_CHARS,
+            len(chunk.protected.text) // 2,
+        )
+        retry_chunks = _translation_chunks(chunk.protected, retry_max_chars)
+        if len(retry_chunks) <= 1:
+            raise
+        return "".join(
+            _translate_chunk(client, retry_chunk, auth) + retry_chunk.separator
+            for retry_chunk in retry_chunks
+        )
+
+
+def _translation_chunks(
+    protected: ProtectedMarkdown,
+    max_chars: int = _MAX_TRANSLATION_CHARS,
+) -> tuple[_TranslationChunk, ...]:
     chunks: list[_TranslationChunk] = []
-    for text, separator in _split_text(protected.text):
+    placeholders = tuple(span.placeholder for span in protected.spans)
+    for text, separator in _split_text(protected.text, max_chars, placeholders):
         spans = tuple(span for span in protected.spans if span.placeholder in text)
         chunk = ProtectedMarkdown(text=text, spans=spans)
         source = text
@@ -205,11 +247,20 @@ def _translation_chunks(protected: ProtectedMarkdown) -> tuple[_TranslationChunk
     return tuple(chunks)
 
 
-def _split_text(text: str) -> tuple[tuple[str, str], ...]:
+def _split_text(
+    text: str,
+    max_chars: int,
+    placeholders: tuple[str, ...],
+) -> tuple[tuple[str, str], ...]:
     chunks: list[tuple[str, str]] = []
+    placeholder_ranges = tuple(
+        (start, start + len(placeholder))
+        for placeholder in placeholders
+        if (start := text.find(placeholder)) >= 0
+    )
     cursor = 0
-    while len(text) - cursor > _MAX_TRANSLATION_CHARS:
-        limit = cursor + _MAX_TRANSLATION_CHARS
+    while len(text) - cursor > max_chars:
+        limit = cursor + max_chars
         boundary = text.rfind("\n\n", cursor + 1, limit + 1)
         if boundary < 0:
             boundary = text.rfind("\n", cursor + 1, limit + 1)
@@ -217,6 +268,7 @@ def _split_text(text: str) -> tuple[tuple[str, str], ...]:
             boundary = text.rfind(" ", cursor + 1, limit + 1)
         if boundary < 0:
             boundary = limit
+        boundary = _placeholder_safe_boundary(cursor, boundary, placeholder_ranges)
 
         separator_end = boundary
         if text[boundary : boundary + 1] == "\n":
@@ -230,3 +282,14 @@ def _split_text(text: str) -> tuple[tuple[str, str], ...]:
         cursor = max(boundary, separator_end)
     chunks.append((text[cursor:], ""))
     return tuple(chunk for chunk in chunks if chunk[0])
+
+
+def _placeholder_safe_boundary(
+    cursor: int,
+    boundary: int,
+    placeholder_ranges: tuple[tuple[int, int], ...],
+) -> int:
+    for start, end in placeholder_ranges:
+        if start < boundary < end:
+            return start if start > cursor else end
+    return boundary
