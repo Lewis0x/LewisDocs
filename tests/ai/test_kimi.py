@@ -42,6 +42,8 @@ ENDPOINT: Final = "https://api.kimi.com/coding/v1/chat/completions"
 EXPECTED_TRANSLATION_READ_TIMEOUT: Final = 900.0
 EXPECTED_MAX_TRANSLATION_CHARS: Final = 10_000
 EXPECTED_TRANSLATION_CHUNKS: Final = 3
+RETRY_FAILURE_THRESHOLD: Final = 4_000
+EXPECTED_RETRY_TOKENS: Final = 2
 
 BAD_RESPONSES: Final[tuple[bytes, ...]] = (
     b"not json",
@@ -245,6 +247,65 @@ def test_translate_chunks_large_markdown_and_reassembles_original_boundaries() -
     assert result == markdown  # noqa: S101
     assert len(observed_chunks) == EXPECTED_TRANSLATION_CHUNKS  # noqa: S101
     assert all(len(chunk) <= EXPECTED_MAX_TRANSLATION_CHARS for chunk in observed_chunks)  # noqa: S101
+
+
+def test_translate_retries_failed_chunk_at_smaller_boundaries() -> None:
+    """Retry only invalid provider output by splitting the failed chunk."""
+    paragraph_a = ("Translate the first sentence exactly. " * 90) + "`literal_a`."
+    paragraph_b = ("Translate the second sentence exactly. " * 90) + "`literal_b`."
+    markdown = f"# Retry handbook\n\n{paragraph_a}\n\n{paragraph_b}"
+    expected_tokens = tuple(span.placeholder for span in protect_markdown(markdown).spans)
+    observed_chunks: list[str] = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        payload = KimiRequest.model_validate_json(request.content)
+        chunk = payload.messages[1].content
+        observed_chunks.append(chunk)
+        if len(chunk) <= RETRY_FAILURE_THRESHOLD:
+            return _json_response(request, chunk)
+
+        assert len(expected_tokens) == EXPECTED_RETRY_TOKENS  # noqa: S101
+        swapped = chunk.replace(expected_tokens[0], "@@SWAP@@", 1)
+        swapped = swapped.replace(expected_tokens[1], expected_tokens[0], 1)
+        return _json_response(
+            request,
+            swapped.replace("@@SWAP@@", expected_tokens[1], 1),
+        )
+
+    api_key = SecretStr(secrets.token_urlsafe(48))
+    with httpx2.Client(transport=httpx2.MockTransport(handler)) as client:
+        result = translate_markdown(
+            client,
+            TranslationInput(source_id=SOURCE_ID, markdown=markdown, api_key=api_key),
+        )
+
+    assert result == markdown  # noqa: S101
+    assert len(observed_chunks[0]) > RETRY_FAILURE_THRESHOLD  # noqa: S101
+    assert all(  # noqa: S101
+        len(chunk) <= RETRY_FAILURE_THRESHOLD for chunk in observed_chunks[1:]
+    )
+
+
+def test_translate_retry_never_splits_a_protected_placeholder() -> None:
+    """Keep each protected placeholder atomic across recursive hard splits."""
+    markdown = ("a" * 3_500) + "`literal_at_boundary`" + ("b" * 3_500)
+    expected_token = protect_markdown(markdown).spans[0].placeholder
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        payload = KimiRequest.model_validate_json(request.content)
+        chunk = payload.messages[1].content
+        if len(chunk) > RETRY_FAILURE_THRESHOLD:
+            return _json_response(request, chunk.replace(expected_token, "", 1))
+        return _json_response(request, chunk)
+
+    api_key = SecretStr(secrets.token_urlsafe(48))
+    with httpx2.Client(transport=httpx2.MockTransport(handler)) as client:
+        result = translate_markdown(
+            client,
+            TranslationInput(source_id=SOURCE_ID, markdown=markdown, api_key=api_key),
+        )
+
+    assert result == markdown  # noqa: S101
 
 
 @pytest.mark.parametrize("response_body", BAD_RESPONSES)
