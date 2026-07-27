@@ -9,7 +9,7 @@ from collections import Counter
 from dataclasses import dataclass
 from typing import Final, NoReturn, TypeAlias
 
-from scripts.ai.errors import AIAgentError, ErrorCode
+from scripts.ai.errors import AIAgentError, ErrorCode, TranslationFailureReason
 
 _TOKEN_TEMPLATE: Final = "⟦LEWISDOCS_{index:04d}⟧"  # noqa: S105
 _TOKEN_RE: Final = re.compile(r"⟦LEWISDOCS_\d{4}⟧")
@@ -97,16 +97,16 @@ def restore_and_validate(
     expected_tokens = tuple(span.placeholder for span in protected.spans)
     found_tokens = tuple(_TOKEN_RE.findall(translated))
     if found_tokens != expected_tokens:
-        _fail()
+        _fail(TranslationFailureReason.OUTPUT_TOKEN_INVALID)
     if _structure_signature(source) != _structure_signature(translated):
-        _fail()
+        _fail(TranslationFailureReason.OUTPUT_STRUCTURE_INVALID)
 
     restored = translated
     for span in protected.spans:
         restored = restored.replace(span.placeholder, span.original, 1)
 
     if _literal_signature(source) != _literal_signature(restored):
-        _fail()
+        _fail(TranslationFailureReason.OUTPUT_LITERAL_INVALID)
     return restored
 
 
@@ -213,8 +213,9 @@ def _table_shape(rows: list[str]) -> tuple[tuple[int, bool], ...]:
     return tuple(shape)
 
 
-def _fail() -> NoReturn:
+def _fail(reason: TranslationFailureReason) -> NoReturn:
     raise AIAgentError(
         code=ErrorCode.TRANSLATION_FAILED,
         message=_FAILURE_MESSAGE,
+        reason=reason,
     )
