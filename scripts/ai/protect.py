@@ -11,8 +11,8 @@ from typing import Final, NoReturn, TypeAlias
 
 from scripts.ai.errors import AIAgentError, ErrorCode, TranslationFailureReason
 
-_TOKEN_TEMPLATE: Final = "⟦LEWISDOCS_{index:04d}⟧"  # noqa: S105
-_TOKEN_RE: Final = re.compile(r"⟦LEWISDOCS_\d{4}⟧")
+_TOKEN_TEMPLATE: Final = "@@LEWISDOCS_{index:04d}@@"  # noqa: S105
+_TOKEN_RE: Final = re.compile(r"@@LEWISDOCS_\d{4}@@")
 _FAILURE_MESSAGE: Final = "translation validation failed"
 _OUTER_MARKDOWN_FENCE_START: Final = r"\A[ \t\r\n]*(?P<mark>`{3,}|~{3,})(?:markdown|md)[ \t]*\r?\n"
 _OUTER_MARKDOWN_FENCE_END: Final = r"(?P<body>.*)\r?\n(?P=mark)[ \t\r\n]*\Z"
