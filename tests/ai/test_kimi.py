@@ -40,9 +40,12 @@ MARKDOWN: Final = (
 FAILURE_MESSAGE: Final = "translation failed"
 ENDPOINT: Final = "https://api.kimi.com/coding/v1/chat/completions"
 EXPECTED_TRANSLATION_READ_TIMEOUT: Final = 900.0
-EXPECTED_MAX_TRANSLATION_CHARS: Final = 10_000
-EXPECTED_TRANSLATION_CHUNKS: Final = 3
-RETRY_FAILURE_THRESHOLD: Final = 4_000
+EXPECTED_SOURCE_CHUNK_CHARS: Final = 4_000
+EXPECTED_MAX_PROVIDER_CHARS: Final = 6_000
+MIN_SEMANTIC_CHUNK_CHARS: Final = EXPECTED_SOURCE_CHUNK_CHARS // 2
+MIN_TRANSLATION_CHUNKS: Final = 4
+EXPECTED_SECTION_CHUNKS: Final = 2
+RETRY_FAILURE_THRESHOLD: Final = 2_000
 PROVIDER_PLACEHOLDER: Final = "@@LEWISDOCS_LITERAL@@"
 MIN_STRUCTURE_PLACEHOLDERS: Final = 8
 
@@ -255,8 +258,100 @@ def test_translate_chunks_large_markdown_and_reassembles_original_boundaries() -
         )
 
     assert result == markdown  # noqa: S101
-    assert len(observed_chunks) == EXPECTED_TRANSLATION_CHUNKS  # noqa: S101
-    assert all(len(chunk) <= EXPECTED_MAX_TRANSLATION_CHARS for chunk in observed_chunks)  # noqa: S101
+    assert len(observed_chunks) >= MIN_TRANSLATION_CHUNKS  # noqa: S101
+    assert all(len(chunk) <= EXPECTED_MAX_PROVIDER_CHARS for chunk in observed_chunks)  # noqa: S101
+
+
+def test_translate_prefers_markdown_section_boundaries() -> None:
+    """Keep a heading with its section instead of filling the preceding chunk."""
+    introduction = "Introductory context. " * 20
+    section_one = "First section detail. " * 120
+    section_two = "Second section detail. " * 120
+    markdown = (
+        f"# Sectioned handbook\n\n{introduction}\n\n"
+        f"## Section one\n\n{section_one}\n\n"
+        f"## Section two\n\n{section_two}"
+    )
+    observed_chunks: list[str] = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        payload = KimiRequest.model_validate_json(request.content)
+        chunk = payload.messages[1].content
+        observed_chunks.append(chunk)
+        return _json_response(request, chunk)
+
+    api_key = SecretStr(secrets.token_urlsafe(48))
+    with httpx2.Client(transport=httpx2.MockTransport(handler)) as client:
+        result = translate_markdown(
+            client,
+            TranslationInput(source_id=SOURCE_ID, markdown=markdown, api_key=api_key),
+        )
+
+    assert result == markdown  # noqa: S101
+    assert len(observed_chunks) == EXPECTED_SECTION_CHUNKS  # noqa: S101
+    assert "Section two" not in observed_chunks[0]  # noqa: S101
+    assert observed_chunks[1].startswith(  # noqa: S101
+        f"{PROVIDER_PLACEHOLDER}Section two"
+    )
+    assert all(len(chunk) <= EXPECTED_MAX_PROVIDER_CHARS for chunk in observed_chunks)  # noqa: S101
+
+
+def test_translate_avoids_tiny_chunks_at_early_section_boundaries() -> None:
+    """Pack a short section with following prose before falling back within that section."""
+    markdown = "".join(
+        (
+            "# Handbook\n\n",
+            "## Short section\n\nBrief context.\n\n",
+            "## Long section\n\n",
+            "Long section detail. " * 320,
+        )
+    )
+    observed_chunks: list[str] = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        payload = KimiRequest.model_validate_json(request.content)
+        chunk = payload.messages[1].content
+        observed_chunks.append(chunk)
+        return _json_response(request, chunk)
+
+    api_key = SecretStr(secrets.token_urlsafe(48))
+    with httpx2.Client(transport=httpx2.MockTransport(handler)) as client:
+        result = translate_markdown(
+            client,
+            TranslationInput(source_id=SOURCE_ID, markdown=markdown, api_key=api_key),
+        )
+
+    assert result == markdown  # noqa: S101
+    assert len(observed_chunks[0]) >= MIN_SEMANTIC_CHUNK_CHARS  # noqa: S101
+    assert "Long section" in observed_chunks[0]  # noqa: S101
+    assert all(len(chunk) <= EXPECTED_MAX_PROVIDER_CHARS for chunk in observed_chunks)  # noqa: S101
+
+
+def test_translate_protects_markdown_link_structure_around_translated_labels() -> None:
+    """Keep a protected link target in the target slot while translating its label."""
+    markdown = "Read [global settings](/docs/en/settings#global-config-settings) for details."
+    observed_chunks: list[str] = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        payload = KimiRequest.model_validate_json(request.content)
+        chunk = payload.messages[1].content
+        observed_chunks.append(chunk)
+        return _json_response(request, chunk)
+
+    api_key = SecretStr(secrets.token_urlsafe(48))
+    with httpx2.Client(transport=httpx2.MockTransport(handler)) as client:
+        result = translate_markdown(
+            client,
+            TranslationInput(source_id=SOURCE_ID, markdown=markdown, api_key=api_key),
+        )
+
+    assert result == markdown  # noqa: S101
+    assert observed_chunks == [  # noqa: S101
+        (
+            f"Read {PROVIDER_PLACEHOLDER}global settings"
+            f"{PROVIDER_PLACEHOLDER * 3} for details."
+        )
+    ]
 
 
 def test_translate_retries_failed_chunk_at_smaller_boundaries() -> None:
@@ -265,12 +360,14 @@ def test_translate_retries_failed_chunk_at_smaller_boundaries() -> None:
     paragraph_b = ("Translate the second sentence exactly. " * 90) + "`literal_b`."
     markdown = f"# Retry handbook\n\n{paragraph_a}\n\n{paragraph_b}"
     observed_chunks: list[str] = []
+    successful_chunks: list[str] = []
 
     def handler(request: httpx2.Request) -> httpx2.Response:
         payload = KimiRequest.model_validate_json(request.content)
         chunk = payload.messages[1].content
         observed_chunks.append(chunk)
         if len(chunk) <= RETRY_FAILURE_THRESHOLD:
+            successful_chunks.append(chunk)
             return _json_response(request, chunk)
 
         return _json_response(request, chunk.replace(PROVIDER_PLACEHOLDER, "", 1))
@@ -284,9 +381,8 @@ def test_translate_retries_failed_chunk_at_smaller_boundaries() -> None:
 
     assert result == markdown  # noqa: S101
     assert len(observed_chunks[0]) > RETRY_FAILURE_THRESHOLD  # noqa: S101
-    assert all(  # noqa: S101
-        len(chunk) <= RETRY_FAILURE_THRESHOLD for chunk in observed_chunks[1:]
-    )
+    assert successful_chunks  # noqa: S101
+    assert all(len(chunk) <= RETRY_FAILURE_THRESHOLD for chunk in successful_chunks)  # noqa: S101
 
 
 def test_translate_retry_never_splits_a_protected_placeholder() -> None:
@@ -478,6 +574,31 @@ def test_translate_classifies_provider_status_without_exposing_response(
             lambda: translate_markdown(client, _translation_input(api_key)),
             expected_reason,
         )
+
+
+def test_translate_retries_transient_rate_limit_inside_the_current_chunk() -> None:
+    """Keep completed chunks in memory when a transient provider limit clears."""
+    attempts = 0
+    api_key = SecretStr(secrets.token_urlsafe(48))
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            return httpx2.Response(
+                status_code=429,
+                request=request,
+                headers={"retry-after": "0"},
+                content=b'{"error":{"message":"We are receiving too many requests"}}',
+            )
+        payload = KimiRequest.model_validate_json(request.content)
+        return _json_response(request, payload.messages[1].content)
+
+    with create_http_client(httpx2.MockTransport(handler)) as client:
+        result = translate_markdown(client, _translation_input(api_key))
+
+    assert result == MARKDOWN  # noqa: S101
+    assert attempts == EXPECTED_SECTION_CHUNKS  # noqa: S101
 
 
 def test_runtime_secret_is_absent_from_output_files_and_diff(
