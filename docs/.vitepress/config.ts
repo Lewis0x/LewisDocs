@@ -1,5 +1,10 @@
+import { existsSync } from 'node:fs'
 import { withMermaid } from 'vitepress-plugin-mermaid'
 import { createSearchRenderer } from './search-render.mjs'
+
+const HAS_AI_TRANSLATIONS = existsSync(
+  new URL('../../source-ai/content/zh-CN', import.meta.url),
+)
 
 const AI_SOURCES = [
   { product: 'claude-code', slug: 'quickstart', title: 'Claude Code Quickstart' },
@@ -156,18 +161,23 @@ export default withMermaid({
         text: 'AI 双语手册',
         collapsed: false,
         items: [
-          { text: 'Claude Code 学习路径', link: '/ai/zh-CN/learn/claude-code' },
-          { text: 'Codex 学习路径', link: '/ai/zh-CN/learn/codex' },
-          ...AI_SOURCES.flatMap((source) => [
-            {
+          ...(HAS_AI_TRANSLATIONS
+            ? [
+                { text: 'Claude Code 学习路径', link: '/ai/zh-CN/learn/claude-code' },
+                { text: 'Codex 学习路径', link: '/ai/zh-CN/learn/codex' },
+              ]
+            : []),
+          ...AI_SOURCES.flatMap((source) => {
+            const english = {
               text: `EN · ${source.title}`,
               link: `/ai/en/${source.product}/${source.slug}`,
-            },
-            {
+            }
+            const chinese = {
               text: `中文 · ${source.title}`,
               link: `/ai/zh-CN/${source.product}/${source.slug}`,
-            },
-          ]),
+            }
+            return HAS_AI_TRANSLATIONS ? [english, chinese] : [english]
+          }),
         ],
       },
     ],

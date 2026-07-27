@@ -58,6 +58,44 @@ def validate_candidate(
         _fail(cause=exc)
 
 
+def validate_english_candidate(
+    *,
+    managed_root: Path,
+    manifest: SourceManifest,
+) -> None:
+    """Validate an exact English preview while translated pages are pending."""
+    try:
+        _require_directory(managed_root)
+        if {path.name for path in managed_root.iterdir()} != {"en", "learn"}:
+            _fail()
+        english_root = managed_root / "en"
+        _require_directory(english_root)
+        if {path.name for path in english_root.iterdir()} != {"claude-code", "codex"}:
+            _fail()
+        pages: dict[SourceId, AcceptedPage] = {}
+        for source in manifest.root:
+            product_root = english_root / source.product
+            _require_directory(product_root)
+            expected = {
+                item.slug + ".md" for item in manifest.root if item.product == source.product
+            }
+            if {path.name for path in product_root.iterdir()} != expected:
+                _fail(source.id)
+            page_path = product_root / f"{source.slug}.md"
+            _require_regular_file(page_path, source.id)
+            page = parse_accepted_page(page_path)
+            if page.source_id != source.id or page.source_id in pages:
+                _fail(source.id)
+            pages[page.source_id] = page
+            _validate_english(source, page)
+        if len(pages) != _PAGE_COUNT:
+            _fail()
+    except AIAgentError:
+        raise
+    except (OSError, UnicodeDecodeError, ValidationError, ValueError) as exc:
+        _fail(cause=exc)
+
+
 def _parse_managed_pages(
     root: Path,
     manifest: SourceManifest,
@@ -97,6 +135,7 @@ def _parse_managed_pages(
 
 
 def _validate_pair(source: Source, english: AcceptedPage, chinese: AcceptedPage) -> None:
+    _validate_english(source, english)
     common = ("source_id", "product", "canonical_url", "owner", "content_sha256")
     for name in common:
         if getattr(english, name) != getattr(chinese, name):
@@ -106,24 +145,36 @@ def _validate_pair(source: Source, english: AcceptedPage, chinese: AcceptedPage)
         or english.product != source.product
         or english.canonical_url != source.canonical_url
         or english.owner != source.owner
-        or english.title != source.title
-        or english.lang != "en"
         or chinese.lang != "zh-CN"
         or chinese.translation_of != source.id
     ):
         _fail(source.id)
     attribution = f"[Official source]({source.canonical_url})\n\nContent owner: {source.owner}\n\n"
-    english_prefix = attribution
     chinese_prefix = f"{WARNING}\n\n{attribution}"
-    if not english.body.startswith(english_prefix) or not chinese.body.startswith(chinese_prefix):
+    if not chinese.body.startswith(chinese_prefix):
         _fail(source.id)
-    english_markdown = english.body.removeprefix(english_prefix)
     translated = chinese.body.removeprefix(chinese_prefix)
-    endorsed = _ENDORSEMENT_RE.search(english.body + chinese.body)
+    if chinese.title != first_h1(translated) or _ENDORSEMENT_RE.search(chinese.body):
+        _fail(source.id)
+
+
+def _validate_english(source: Source, english: AcceptedPage) -> None:
     if (
-        sha256(english_markdown.encode("utf-8")).hexdigest() != english.content_sha256
-        or chinese.title != first_h1(translated)
-        or endorsed
+        english.source_id != source.id
+        or english.product != source.product
+        or english.canonical_url != source.canonical_url
+        or english.owner != source.owner
+        or english.title != source.title
+        or english.lang != "en"
+    ):
+        _fail(source.id)
+    prefix = f"[Official source]({source.canonical_url})\n\nContent owner: {source.owner}\n\n"
+    if not english.body.startswith(prefix):
+        _fail(source.id)
+    markdown = english.body.removeprefix(prefix)
+    if (
+        sha256(markdown.encode("utf-8")).hexdigest() != english.content_sha256
+        or _ENDORSEMENT_RE.search(english.body)
     ):
         _fail(source.id)
 

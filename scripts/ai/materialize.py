@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -15,7 +16,8 @@ from typing import TYPE_CHECKING, Final, NoReturn
 
 from scripts.ai.errors import AIAgentError, ErrorCode
 from scripts.ai.manifest import load_sources
-from scripts.ai.pages import validate_candidate
+from scripts.ai.pages import validate_candidate, validate_english_candidate
+from scripts.ai.protect import protect_markdown
 from scripts.ai.sync_contracts import SyncOptions
 from scripts.ai.sync_transaction import validate_content_root
 
@@ -23,6 +25,13 @@ if TYPE_CHECKING:
     from scripts.ai.types import SourceId
 
 _FRONTMATTER_END: Final = b"\n---\n"
+_MDX_COMPONENT_RE: Final = re.compile(
+    r"(?ms)</?[A-Z][A-Za-z0-9]*(?:\s+[^<>]*?)?\s*/?>"
+)
+_MDX_COMMENT_RE: Final = re.compile(r"(?s)\{/\*.*?\*/\}")
+_MDX_ICON_SLOT_RE: Final = re.compile(
+    r'(?ms)\s*<span\s+slot="icon">.*?</span>\s*'
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,13 +64,17 @@ def materialize_ai(options: MaterializeOptions) -> tuple[MaterializedRoute, ...]
     """Derive validated public content into the VitePress source tree."""
     content_root = _validated_content_root(options)
     manifest = load_sources(options.manifest_path)
-    validate_candidate(
-        managed_root=content_root,
-        learning_root=content_root / "learn",
-        manifest=manifest,
-    )
+    bilingual = (content_root / "zh-CN").is_dir()
+    if bilingual:
+        validate_candidate(
+            managed_root=content_root,
+            learning_root=content_root / "learn",
+            manifest=manifest,
+        )
+    else:
+        validate_english_candidate(managed_root=content_root, manifest=manifest)
     _require_derived_target(options)
-    routes = tuple(
+    source_routes = tuple(
         MaterializedRoute(
             source_id=source.id,
             lang=lang,
@@ -69,8 +82,19 @@ def materialize_ai(options: MaterializeOptions) -> tuple[MaterializedRoute, ...]
             counterpart=f"/ai/{'zh-CN' if lang == 'en' else 'en'}/{source.product}/{source.slug}",
         )
         for source in manifest.root
-        for lang in ("en", "zh-CN")
-    ) + tuple(
+        for lang in (("en", "zh-CN") if bilingual else ("en",))
+    )
+    if not bilingual:
+        source_routes = tuple(
+            MaterializedRoute(
+                source_id=route.source_id,
+                lang=route.lang,
+                route=route.route,
+                counterpart=None,
+            )
+            for route in source_routes
+        )
+    learning_routes = tuple(
         MaterializedRoute(
             source_id=None,
             lang="zh-CN",
@@ -78,7 +102,8 @@ def materialize_ai(options: MaterializeOptions) -> tuple[MaterializedRoute, ...]
             counterpart=None,
         )
         for product in ("claude-code", "codex")
-    )
+    ) if bilingual else ()
+    routes = source_routes + learning_routes
     _replace_derived_tree(options, content_root, routes)
     return routes
 
@@ -203,7 +228,7 @@ def _populate(
 
 def _derive_source_page(data: bytes, item: MaterializedRoute) -> bytes:
     closing = data.find(_FRONTMATTER_END, len(b"---\n"))
-    if not data.startswith(b"---\n") or closing < 0 or item.counterpart is None:
+    if not data.startswith(b"---\n") or closing < 0:
         _validation_failed()
     fields = data[len(b"---\n") : closing].decode("utf-8").splitlines()
     title_key, separator, title = fields[0].partition(": ")
@@ -211,12 +236,27 @@ def _derive_source_page(data: bytes, item: MaterializedRoute) -> bytes:
         _validation_failed()
     prefix = "EN · " if item.lang == "en" else "中文 · "
     label = "EN" if item.lang == "en" else "中文"
+    counterpart = (
+        f"\nai_counterpart: {item.counterpart}" if item.counterpart is not None else ""
+    )
     derived = (
         f"---\ntitle: {prefix}{title}\n"
         + "\n".join(fields[1:])
-        + f"\nai_counterpart: {item.counterpart}\nai_search_label: {label}"
+        + counterpart
+        + f"\nai_search_label: {label}"
     ).encode()
-    return derived + data[closing:]
+    public_body = _strip_mdx_components(data[closing:].decode("utf-8")).encode()
+    return derived + public_body
+
+
+def _strip_mdx_components(markdown: str) -> str:
+    protected = protect_markdown(markdown)
+    text = _MDX_COMMENT_RE.sub("", protected.text)
+    text = _MDX_ICON_SLOT_RE.sub("", text)
+    text = _MDX_COMPONENT_RE.sub("", text)
+    for span in protected.spans:
+        text = text.replace(span.placeholder, span.original, 1)
+    return text
 
 
 def _rollback(

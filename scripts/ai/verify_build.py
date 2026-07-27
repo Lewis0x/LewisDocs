@@ -25,6 +25,7 @@ class VerifyBuildOptions:
     repo_root: Path
     dist_root: Path
     manifest_path: Path
+    content_root: Path
 
 
 class _SearchFields(BaseModel):
@@ -45,7 +46,10 @@ def verify_dist(options: VerifyBuildOptions) -> None:
     """Verify the public HTML and local-search route inventory."""
     try:
         manifest = load_sources(options.manifest_path)
-        expected = _expected_routes(manifest)
+        bilingual = (options.content_root / "zh-CN").is_dir()
+        if not (options.content_root / "en").is_dir():
+            _validation_failed()
+        expected = _expected_routes(manifest, bilingual=bilingual)
         html_routes = frozenset(
             f"/{path.relative_to(options.dist_root).with_suffix('').as_posix()}"
             for path in (options.dist_root / "ai").rglob("*.html")
@@ -64,7 +68,7 @@ def verify_dist(options: VerifyBuildOptions) -> None:
         titles = tuple(field.title for field in search.stored_fields.values() if field.title)
         if not any(title.startswith("EN · ") for title in titles):
             _validation_failed()
-        if not any(title.startswith("中文 · ") for title in titles):
+        if bilingual and not any(title.startswith("中文 · ") for title in titles):
             _validation_failed()
     except AIAgentError:
         raise
@@ -81,26 +85,23 @@ def main() -> int:
                 repo_root=repo_root,
                 dist_root=repo_root / "docs" / ".vitepress" / "dist",
                 manifest_path=repo_root / "source-ai" / "sources.yaml",
+                content_root=repo_root / "source-ai" / "content",
             )
         )
     except AIAgentError as error:
         _ = sys.stderr.write(f"{error.code}: public AI build verification failed\n")
         return 1
-    _ = sys.stdout.write("verified 22 AI handbook routes\n")
+    _ = sys.stdout.write("verified public AI handbook routes\n")
     return 0
 
 
-def _expected_routes(manifest: SourceManifest) -> frozenset[str]:
+def _expected_routes(manifest: SourceManifest, *, bilingual: bool) -> frozenset[str]:
+    english = tuple(f"/ai/en/{source.product}/{source.slug}" for source in manifest.root)
+    if not bilingual:
+        return frozenset(english)
+    chinese = tuple(f"/ai/zh-CN/{source.product}/{source.slug}" for source in manifest.root)
     return frozenset(
-        (
-            *(
-                f"/ai/{lang}/{source.product}/{source.slug}"
-                for source in manifest.root
-                for lang in ("en", "zh-CN")
-            ),
-            "/ai/zh-CN/learn/claude-code",
-            "/ai/zh-CN/learn/codex",
-        )
+        (*english, *chinese, "/ai/zh-CN/learn/claude-code", "/ai/zh-CN/learn/codex")
     )
 
 
@@ -114,7 +115,8 @@ def _load_search_index(dist_root: Path) -> _SearchIndex:
     if start < 0 or end <= start:
         _validation_failed()
     raw_template = text[start + 1 : end]
-    quoted_template = '"' + raw_template.replace('"', '\\"') + '"'
+    unescaped_template = raw_template.replace(r"\`", "`").replace(r"\${", "${")
+    quoted_template = '"' + unescaped_template.replace('"', '\\"') + '"'
     cooked_json = TypeAdapter(str).validate_json(quoted_template)
     return _SearchIndex.model_validate_json(cooked_json)
 

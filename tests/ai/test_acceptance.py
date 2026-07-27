@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import json
+import shutil
+from dataclasses import replace
+from hashlib import sha256
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
 from uuid import uuid4
@@ -136,6 +139,50 @@ def test_ac1_ac2_ac7_exact_pairs_routes_links_learning_and_cad(tmp_path: Path) -
         path.relative_to(ROOT / "docs").parts[0] != "ai"
         for path in iter_cad_markdown(ROOT / "docs")
     )
+
+
+def test_materialize_allows_complete_english_preview_without_dead_counterparts(
+    tmp_path: Path,
+) -> None:
+    """Publish all English sources while translated counterparts are still pending."""
+    manifest = load_sources(MANIFEST_PATH)
+    private = tmp_path / "private"
+    pages = list(normalized_pages(manifest))
+    markdown = (
+        "# Synthetic claude-code/quickstart\n\n"
+        "<Tip>Keep this reviewable guidance.</Tip>\n\n"
+        '[<IconItem title="Review"><span slot="icon"><Plugin /></span>'
+        "Review settings</IconItem>](https://example.test/settings)\n\n"
+        "```md\n<Tip>literal example</Tip>\n```\n"
+    )
+    pages[0] = replace(
+        pages[0],
+        markdown=markdown,
+        content_sha256=sha256(markdown.encode("utf-8")).hexdigest(),
+    )
+    install_content(private, tuple(pages))
+    shutil.rmtree(private / "zh-CN")
+    repository = tmp_path / "repository"
+
+    routes = materialize_ai(
+        MaterializeOptions(repository, private, repository / "docs" / "ai", MANIFEST_PATH)
+    )
+
+    assert len(routes) == len(SOURCE_IDS)
+    assert all(route.lang == "en" and route.counterpart is None for route in routes)
+    for source in manifest.root:
+        page = repository / "docs" / "ai" / "en" / source.product / f"{source.slug}.md"
+        assert page.is_file()
+        assert "ai_counterpart:" not in page.read_text(encoding="utf-8")
+    quickstart = (
+        repository / "docs" / "ai" / "en" / "claude-code" / "quickstart.md"
+    ).read_text(encoding="utf-8")
+    assert "<Tip>Keep" not in quickstart
+    assert "Keep this reviewable guidance." in quickstart
+    assert "<span" not in quickstart
+    assert "[Review settings](https://example.test/settings)" in quickstart
+    assert "```md\n<Tip>literal example</Tip>\n```" in quickstart
+    assert not (repository / "docs" / "ai" / "zh-CN").exists()
 
 
 def test_ac3_noop_needs_no_key_or_translator_and_changes_no_private_bytes(
