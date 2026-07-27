@@ -149,6 +149,15 @@ def test_protects_product_api_and_config_identifiers() -> None:
     )
 
 
+def test_protects_active_translation_model_name() -> None:
+    """Protect the exact model identifier used in accepted-page metadata."""
+    _assert_protection(
+        "Use kimi-for-coding",
+        "Use ⟦LEWISDOCS_0000⟧",
+        ("kimi-for-coding",),
+    )
+
+
 def test_restore_allows_prose_translation_and_restores_literals() -> None:
     """Permit translated prose when tokens and Markdown structure are intact."""
     source, _, protected = _fixture()

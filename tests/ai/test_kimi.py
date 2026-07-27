@@ -38,7 +38,7 @@ MARKDOWN: Final = (
     "# Synthetic handbook\n\nRun `npm run ai:sync` against https://example.test/docs\n"
 )
 FAILURE_MESSAGE: Final = "translation failed"
-ENDPOINT: Final = "https://api.moonshot.cn/v1/chat/completions"
+ENDPOINT: Final = "https://api.kimi.com/coding/v1/chat/completions"
 
 BAD_RESPONSES: Final[tuple[bytes, ...]] = (
     b"not json",
@@ -118,16 +118,14 @@ def _json_response(request: httpx2.Request, content: str) -> httpx2.Response:
 def test_boundary_models_are_frozen_and_validate_required_shapes() -> None:
     """Accept the fixed request and standard response while rejecting bad shapes."""
     request = KimiRequest(
-        model="kimi-k3",
-        reasoning_effort="low",
+        model="kimi-for-coding",
         messages=(
             KimiMessage(role="system", content="system"),
             KimiMessage(role="user", content="user"),
         ),
     )
     assert request.model_dump(mode="json") == {  # noqa: S101
-        "model": "kimi-k3",
-        "reasoning_effort": "low",
+        "model": "kimi-for-coding",
         "messages": [
             {"role": "system", "content": "system"},
             {"role": "user", "content": "user"},
@@ -192,8 +190,7 @@ def test_translate_posts_exact_wire_and_restores_protected_literals(
     assert observed.method == "POST"  # noqa: S101
     assert observed.url == ENDPOINT  # noqa: S101
     assert observed.authorization_ok  # noqa: S101
-    assert observed.payload.model == "kimi-k3"  # noqa: S101
-    assert observed.payload.reasoning_effort == "low"  # noqa: S101
+    assert observed.payload.model == "kimi-for-coding"  # noqa: S101
     assert observed.payload.messages[0].role == "system"  # noqa: S101
     assert observed.payload.messages[1].role == "user"  # noqa: S101
     assert observed.payload.messages[1].content == protected.text  # noqa: S101
@@ -205,6 +202,7 @@ def test_translate_posts_exact_wire_and_restores_protected_literals(
             '"n"',
             "presence_penalty",
             "frequency_penalty",
+            "reasoning_effort",
         )
     )
     assert "# 合成手册" in result  # noqa: S101

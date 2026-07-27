@@ -162,7 +162,7 @@ def test_chinese_render_has_warning_official_attribution_and_translated_title(
 
     assert page.title == f"中文 {source.slug}"  # noqa: S101
     assert page.translation_of == source.id  # noqa: S101
-    assert page.translation_model == "kimi-k3"  # noqa: S101
+    assert page.translation_model == "kimi-for-coding"  # noqa: S101
     assert page.ai_translated is True  # noqa: S101
     prefix = f"{WARNING}\n\n[Official source]({source.canonical_url})\n\n"
     prefix += f"Content owner: {source.owner}\n\n"
