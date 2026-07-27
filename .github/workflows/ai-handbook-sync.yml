@@ -38,7 +38,25 @@ jobs:
       - name: Sync handbook sources
         env:
           MOONSHOT_API_KEY: ${{ secrets.MOONSHOT_API_KEY }}
-        run: npm run ai:sync
+          AI_SYNC_RESUME: '1'
+        shell: bash
+        run: |
+          delays=(0 60 300 900)
+          status=1
+          for index in "${!delays[@]}"; do
+            delay="${delays[$index]}"
+            if (( delay > 0 )); then
+              echo "Retrying from the local checkpoint in ${delay} seconds."
+              sleep "$delay"
+            fi
+            if npm run ai:sync; then
+              exit 0
+            else
+              status=$?
+            fi
+            echo "AI sync attempt $((index + 1)) failed; checkpoint retained."
+          done
+          exit "$status"
 
       - name: Prepare public content
         run: npm run prepare-content
