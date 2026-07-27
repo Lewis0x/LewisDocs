@@ -27,7 +27,6 @@ if TYPE_CHECKING:
 _ENDPOINT: Final = "https://api.kimi.com/coding/v1/chat/completions"
 _SERVER_ERROR_MIN_STATUS: Final = 500
 _MAX_TRANSLATION_CHARS: Final = 10_000
-_MIN_TRANSLATION_CHARS: Final = 1_000
 _TRANSLATION_TIMEOUT: Final = httpx2.Timeout(
     connect=10.0,
     read=900.0,
@@ -212,17 +211,10 @@ def _translate_chunk(
     try:
         return restore_and_validate(chunk.source, chunk.protected, completion)
     except AIAgentError as error:
-        has_multiple_tokens = len(chunk.protected.spans) > 1
-        if error.reason not in _RETRYABLE_OUTPUT_REASONS or (
-            len(chunk.protected.text) <= _MIN_TRANSLATION_CHARS and not has_multiple_tokens
-        ):
+        if error.reason not in _RETRYABLE_OUTPUT_REASONS or len(chunk.protected.text) <= 1:
             raise
 
-        retry_floor = 1 if has_multiple_tokens else _MIN_TRANSLATION_CHARS
-        retry_max_chars = max(
-            retry_floor,
-            len(chunk.protected.text) // 2,
-        )
+        retry_max_chars = max(1, len(chunk.protected.text) // 2)
         retry_chunks = _translation_chunks(chunk.protected, retry_max_chars)
         if len(retry_chunks) <= 1:
             raise

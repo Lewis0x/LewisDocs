@@ -343,6 +343,28 @@ def test_translate_keeps_splitting_short_failed_chunks_with_multiple_tokens() ->
     )
 
 
+def test_translate_keeps_splitting_short_structure_failures() -> None:
+    """Isolate Markdown markers when Kimi changes structure in a short chunk."""
+    markdown = "# Short heading that must keep its exact level"
+    observed_chunks: list[str] = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        payload = KimiRequest.model_validate_json(request.content)
+        chunk = payload.messages[1].content
+        observed_chunks.append(chunk)
+        return _json_response(request, chunk.replace("# ", "## ", 1))
+
+    api_key = SecretStr(secrets.token_urlsafe(48))
+    with httpx2.Client(transport=httpx2.MockTransport(handler)) as client:
+        result = translate_markdown(
+            client,
+            TranslationInput(source_id=SOURCE_ID, markdown=markdown, api_key=api_key),
+        )
+
+    assert result == markdown  # noqa: S101
+    assert len(observed_chunks) > 1  # noqa: S101
+
+
 @pytest.mark.parametrize("response_body", BAD_RESPONSES)
 def test_translate_maps_invalid_responses_to_safe_failure(response_body: bytes) -> None:
     """Map malformed or incomplete provider responses to one safe error."""
@@ -376,7 +398,7 @@ def test_translate_maps_http_transport_and_restore_failures() -> None:
     )
 
     def missing_token(request: httpx2.Request) -> httpx2.Response:
-        return _json_response(request, "# 合成手册\n\ntranslated without tokens\n")
+        return _json_response(request, "translated without tokens")
 
     _assert_translation_failed(
         lambda: _call(httpx2.MockTransport(missing_token), api_key),

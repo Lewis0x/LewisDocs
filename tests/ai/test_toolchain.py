@@ -131,7 +131,7 @@ def test_public_handbook_is_unconditional_and_sync_workflow_is_manual() -> None:
     assert "workflow_dispatch:" in workflow
     assert "schedule:" not in workflow
     assert "contents: write" in workflow
-    assert "timeout-minutes: 120" in workflow
+    assert "timeout-minutes: 240" in workflow
     assert "MOONSHOT_API_KEY: ${{ secrets.MOONSHOT_API_KEY }}" in workflow
     assert "npm run ai:sync" in workflow
     assert "git add -- source-ai/content" in workflow
