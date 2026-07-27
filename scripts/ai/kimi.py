@@ -33,9 +33,10 @@ _TRANSLATION_TIMEOUT: Final = httpx2.Timeout(
     pool=10.0,
 )
 _SYSTEM_PROMPT: Final = (
-    "你必须只输出中文 Markdown, 不要解释, 不要用代码围栏包裹答案; "
+    "你必须逐行翻译并只输出中文 Markdown, 不要解释, 不要用代码围栏包裹答案; "
+    "输出行数、行顺序和段落顺序必须与输入完全一致, "
     "保持原文结构与占位符令牌不变, 例如 @@LEWISDOCS_0000@@ 必须逐字保留; "
-    "不得修改格式、标点或保护段落。"
+    "不得移动任何 @@LEWISDOCS_0000@@ 令牌, 不得修改格式、标点或保护段落。"
 )
 _TRANSLATION_FAILED_MESSAGE: Final = "translation failed"
 

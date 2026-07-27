@@ -198,6 +198,8 @@ def test_translate_posts_exact_wire_and_restores_protected_literals(
     assert observed.payload.model == "k3"  # noqa: S101
     assert observed.payload.reasoning_effort == "low"  # noqa: S101
     assert observed.payload.messages[0].role == "system"  # noqa: S101
+    assert "逐行翻译" in observed.payload.messages[0].content  # noqa: S101
+    assert "不得移动任何 @@LEWISDOCS_0000@@ 令牌" in observed.payload.messages[0].content  # noqa: S101
     assert observed.payload.messages[1].role == "user"  # noqa: S101
     assert observed.payload.messages[1].content == protected.text  # noqa: S101
     assert all(  # noqa: S101
