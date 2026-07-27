@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 _ENDPOINT: Final = "https://api.kimi.com/coding/v1/chat/completions"
 _SERVER_ERROR_MIN_STATUS: Final = 500
 _MAX_TRANSLATION_CHARS: Final = 10_000
+_PROVIDER_PLACEHOLDER: Final = "@@LEWISDOCS_LITERAL@@"
 _TRANSLATION_TIMEOUT: Final = httpx2.Timeout(
     connect=10.0,
     read=900.0,
@@ -36,8 +37,8 @@ _TRANSLATION_TIMEOUT: Final = httpx2.Timeout(
 _SYSTEM_PROMPT: Final = (
     "你必须逐行翻译并只输出中文 Markdown, 不要解释, 不要用代码围栏包裹答案; "
     "输出行数、行顺序和段落顺序必须与输入完全一致, "
-    "保持原文结构与占位符令牌不变, 例如 @@LEWISDOCS_0000@@ 必须逐字保留; "
-    "不得移动任何 @@LEWISDOCS_0000@@ 令牌, 不得修改格式、标点或保护段落。"
+    "保持原文结构与占位符令牌不变, @@LEWISDOCS_LITERAL@@ 必须逐字、逐个保留; "
+    "不得增删或移动任何 @@LEWISDOCS_LITERAL@@ 令牌, 不得修改格式、标点或保护段落。"
 )
 _TRANSLATION_FAILED_MESSAGE: Final = "translation failed"
 _RETRYABLE_OUTPUT_REASONS: Final = frozenset(
@@ -196,7 +197,7 @@ def _translate_chunk(
         reasoning_effort="low",
         messages=(
             KimiMessage(role="system", content=_SYSTEM_PROMPT),
-            KimiMessage(role="user", content=chunk.protected.text),
+            KimiMessage(role="user", content=_provider_text(chunk.protected)),
         ),
     )
     response = client.post(
@@ -209,7 +210,15 @@ def _translate_chunk(
     completion = KimiResponse.model_validate_json(response.content).choices[0].message.content
 
     try:
-        return restore_and_validate(chunk.source, chunk.protected, completion)
+        normalized_completion = _normalize_provider_placeholders(
+            chunk.protected,
+            completion,
+        )
+        return restore_and_validate(
+            chunk.source,
+            chunk.protected,
+            normalized_completion,
+        )
     except AIAgentError as error:
         if error.reason not in _RETRYABLE_OUTPUT_REASONS or len(chunk.protected.text) <= 1:
             raise
@@ -222,6 +231,38 @@ def _translate_chunk(
             _translate_chunk(client, retry_chunk, auth) + retry_chunk.separator
             for retry_chunk in retry_chunks
         )
+
+
+def _provider_text(protected: ProtectedMarkdown) -> str:
+    text = protected.text
+    for span in protected.spans:
+        text = text.replace(span.placeholder, _PROVIDER_PLACEHOLDER, 1)
+    return text
+
+
+def _normalize_provider_placeholders(
+    protected: ProtectedMarkdown,
+    completion: str,
+) -> str:
+    expected_count = len(protected.spans)
+    found_count = completion.count(_PROVIDER_PLACEHOLDER)
+    if found_count < expected_count:
+        raise AIAgentError(
+            code=ErrorCode.TRANSLATION_FAILED,
+            message=_TRANSLATION_FAILED_MESSAGE,
+            reason=TranslationFailureReason.OUTPUT_TOKEN_MISSING,
+        )
+    if found_count > expected_count:
+        raise AIAgentError(
+            code=ErrorCode.TRANSLATION_FAILED,
+            message=_TRANSLATION_FAILED_MESSAGE,
+            reason=TranslationFailureReason.OUTPUT_TOKEN_UNEXPECTED,
+        )
+
+    normalized = completion
+    for span in protected.spans:
+        normalized = normalized.replace(_PROVIDER_PLACEHOLDER, span.placeholder, 1)
+    return normalized
 
 
 def _translation_chunks(
