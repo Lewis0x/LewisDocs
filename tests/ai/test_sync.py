@@ -13,7 +13,7 @@ import pytest
 from pydantic import ValidationError
 
 from scripts.ai import sync
-from scripts.ai.errors import AIAgentError, ErrorCode
+from scripts.ai.errors import AIAgentError, ErrorCode, TranslationFailureReason
 from scripts.ai.http_client import create_http_client
 from scripts.ai.kimi import TranslationInput, translate_markdown
 from scripts.ai.manifest import load_sources
@@ -173,6 +173,35 @@ def test_sync_main_maps_errors_to_safe_single_line_output(
     assert f"source_id={source_id if source_id is not None else '-'}" in stdout
     assert sentinel not in stdout
     assert "Traceback" not in stdout
+
+
+def test_sync_main_includes_fixed_translation_failure_reason(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sentinel = "unsafe-provider-detail"
+
+    def failing_run(options: SyncOptions, deps: SyncDeps) -> SyncReport:
+        del options, deps
+        raise AIAgentError(
+            code=ErrorCode.TRANSLATION_FAILED,
+            message=sentinel,
+            source_id=SourceId("claude-code/quickstart"),
+            reason=TranslationFailureReason.PROVIDER_AUTH,
+        )
+
+    monkeypatch.setattr(sync, "run_sync", failing_run)
+
+    actual_exit = sync.main()
+
+    stdout, stderr = capsys.readouterr()
+    assert actual_exit == 5  # noqa: PLR2004
+    assert stderr == ""
+    assert stdout == (
+        "code=TRANSLATION_FAILED source_id=claude-code/quickstart "
+        "message=translation failed reason=provider_auth\n"
+    )
+    assert sentinel not in stdout
 
 
 @pytest.mark.parametrize("content_root", [None, "", "relative/content", "D:/other/content"])

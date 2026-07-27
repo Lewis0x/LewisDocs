@@ -207,7 +207,8 @@ def main() -> int:
     except AIAgentError as error:
         exit_code, message = _error_presentation(error.code)
         source_id = error.source_id if error.source_id is not None else "-"
-        _console().print(f"code={error.code} source_id={source_id} message={message}")
+        reason = f" reason={error.reason}" if error.reason is not None else ""
+        _console().print(f"code={error.code} source_id={source_id} message={message}{reason}")
         return exit_code
     _print_report(report)
     return 0
