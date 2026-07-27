@@ -1,0 +1,102 @@
+[
+  {
+    "id": "claude-code/quickstart",
+    "product": "claude-code",
+    "slug": "quickstart",
+    "title": "Claude Code Quickstart",
+    "canonical_url": "https://code.claude.com/docs/en/quickstart",
+    "fetch_url": "https://code.claude.com/docs/en/quickstart.md",
+    "fetch_format": "markdown",
+    "owner": "Anthropic"
+  },
+  {
+    "id": "claude-code/memory",
+    "product": "claude-code",
+    "slug": "memory",
+    "title": "Claude Code Memory",
+    "canonical_url": "https://code.claude.com/docs/en/memory",
+    "fetch_url": "https://code.claude.com/docs/en/memory.md",
+    "fetch_format": "markdown",
+    "owner": "Anthropic"
+  },
+  {
+    "id": "claude-code/permissions",
+    "product": "claude-code",
+    "slug": "permissions",
+    "title": "Claude Code Permissions",
+    "canonical_url": "https://code.claude.com/docs/en/permissions",
+    "fetch_url": "https://code.claude.com/docs/en/permissions.md",
+    "fetch_format": "markdown",
+    "owner": "Anthropic"
+  },
+  {
+    "id": "claude-code/extensions",
+    "product": "claude-code",
+    "slug": "extensions",
+    "title": "Claude Code Features Overview",
+    "canonical_url": "https://code.claude.com/docs/en/features-overview",
+    "fetch_url": "https://code.claude.com/docs/en/features-overview.md",
+    "fetch_format": "markdown",
+    "owner": "Anthropic"
+  },
+  {
+    "id": "claude-code/best-practices",
+    "product": "claude-code",
+    "slug": "best-practices",
+    "title": "Claude Code Best Practices",
+    "canonical_url": "https://code.claude.com/docs/en/best-practices",
+    "fetch_url": "https://code.claude.com/docs/en/best-practices.md",
+    "fetch_format": "markdown",
+    "owner": "Anthropic"
+  },
+  {
+    "id": "codex/cli",
+    "product": "codex",
+    "slug": "cli",
+    "title": "Codex CLI",
+    "canonical_url": "https://learn.chatgpt.com/docs/codex/cli",
+    "fetch_url": "https://learn.chatgpt.com/docs/codex/cli",
+    "fetch_format": "html",
+    "owner": "OpenAI"
+  },
+  {
+    "id": "codex/prompting",
+    "product": "codex",
+    "slug": "prompting",
+    "title": "Codex Prompting",
+    "canonical_url": "https://learn.chatgpt.com/docs/prompting",
+    "fetch_url": "https://learn.chatgpt.com/docs/prompting.md",
+    "fetch_format": "markdown",
+    "owner": "OpenAI"
+  },
+  {
+    "id": "codex/agents-md",
+    "product": "codex",
+    "slug": "agents-md",
+    "title": "Codex AGENTS.md",
+    "canonical_url": "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
+    "fetch_url": "https://learn.chatgpt.com/docs/agent-configuration/agents-md.md",
+    "fetch_format": "markdown",
+    "owner": "OpenAI"
+  },
+  {
+    "id": "codex/approvals-security",
+    "product": "codex",
+    "slug": "approvals-security",
+    "title": "Codex Agent Approvals and Security",
+    "canonical_url": "https://learn.chatgpt.com/docs/agent-approvals-security",
+    "fetch_url": "https://learn.chatgpt.com/docs/agent-approvals-security.md",
+    "fetch_format": "markdown",
+    "owner": "OpenAI"
+  },
+  {
+    "id": "codex/customization",
+    "product": "codex",
+    "slug": "customization",
+    "title": "Codex Customization Overview",
+    "canonical_url": "https://learn.chatgpt.com/docs/customization/overview",
+    "fetch_url": "https://learn.chatgpt.com/docs/customization/overview.md",
+    "fetch_format": "markdown",
+    "owner": "OpenAI"
+  }
+]

@@ -1,0 +1,53 @@
+[project]
+name = "cad-ai-handbook"
+version = "0.0.0"
+description = "AI handbook scaffold and tooling"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic==2.13.4",
+  "typer==0.27.0",
+  "rich==15.0.0",
+  "httpx2[http2,brotli,zstd]==2.9.1",
+]
+
+[dependency-groups]
+dev = [
+  "pytest==9.1.1",
+  "basedpyright==1.39.9",
+  "ruff==0.16.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/ai"]
+addopts = ["--strict-markers", "--strict-config"]
+pythonpath = ["."]
+
+[tool.basedpyright]
+include = ["scripts/ai", "tests/ai"]
+pythonVersion = "3.11"
+typeCheckingMode = "all"
+
+[tool.ruff]
+line-length = 100
+include = ["scripts/ai/**/*.py", "tests/ai/**/*.py"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["COM812", "ISC001"]
+
+[tool.ruff.lint.flake8-copyright]
+min-file-size = 50
+
+[tool.ruff.lint.per-file-ignores]
+"tests/ai/test_toolchain.py" = [
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D107",
+    "INP001",
+    "S101",
+    "S603",
+    "PLR2004",
+]

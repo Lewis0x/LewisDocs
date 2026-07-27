@@ -48,6 +48,23 @@
   }
 }
 
+/* VitePress switches to its desktop nav at 768px, but this site's longer
+ * Chinese menu needs the mobile controls until the sidebar layout starts. */
+@media (min-width: 768px) and (max-width: 959px) {
+  .VPNavBarMenu,
+  .VPNavBarExtra {
+    display: none !important;
+  }
+
+  .VPNavBarHamburger {
+    display: flex !important;
+  }
+
+  .VPNavScreen {
+    display: block !important;
+  }
+}
+
 .VPDoc.has-aside .content-container {
   max-width: none !important;
   width: 100%;
@@ -213,4 +230,25 @@ body.outline-collapsed .lewisdocs-outline-resizer {
 /* 给右上角折叠按钮预留空间，避免遮挡 outline 第一行 */
 .VPDocAsideOutline {
   padding-right: 32px;
+}
+
+.ai-language-switch {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+.ai-language-switch__link {
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
+  color: var(--vp-c-brand-1);
+  font-weight: 600;
+  padding: 4px 10px;
+  text-decoration: none;
+}
+
+.ai-language-switch__link:hover,
+.ai-language-switch__link:focus-visible {
+  background: var(--vp-c-brand-soft);
+  color: var(--vp-c-brand-2);
 }

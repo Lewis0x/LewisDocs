@@ -19,6 +19,11 @@ import sys
 import unicodedata
 from pathlib import Path
 
+if __package__:
+    from scripts.ai.cad_paths import iter_cad_markdown
+else:
+    from ai.cad_paths import iter_cad_markdown
+
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / 'docs'
 
@@ -261,7 +266,7 @@ def main() -> int:
         print('docs/ does not exist; run `npm run import` first', file=sys.stderr)
         return 1
 
-    files = sorted(DOCS.rglob('*.md'))
+    files = iter_cad_markdown(DOCS)
     print(f'Scanning {len(files)} markdown files...')
     total_rewritten = 0
     total_skipped = 0

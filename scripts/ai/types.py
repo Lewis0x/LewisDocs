@@ -1,0 +1,284 @@
+# Copyright 2026
+
+"""Typed data models used by the AI source manifest and sync boundary."""
+
+from __future__ import annotations
+
+from collections import Counter
+from dataclasses import dataclass
+from typing import ClassVar, Final, Literal, NewType, Self
+from urllib.parse import urlparse
+
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    RootModel,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
+
+SourceId = NewType("SourceId", str)
+
+Product = Literal["claude-code", "codex"]
+FetchFormat = Literal["markdown", "html"]
+Owner = Literal["Anthropic", "OpenAI"]
+RowSpec = tuple[str, str, str, str, str, str, FetchFormat, Owner]
+
+_FROZEN_SOURCE_SET: Final[frozenset[RowSpec]] = frozenset(
+    (
+        (
+            "claude-code/quickstart",
+            "claude-code",
+            "quickstart",
+            "Claude Code Quickstart",
+            "https://code.claude.com/docs/en/quickstart",
+            "https://code.claude.com/docs/en/quickstart.md",
+            "markdown",
+            "Anthropic",
+        ),
+        (
+            "claude-code/memory",
+            "claude-code",
+            "memory",
+            "Claude Code Memory",
+            "https://code.claude.com/docs/en/memory",
+            "https://code.claude.com/docs/en/memory.md",
+            "markdown",
+            "Anthropic",
+        ),
+        (
+            "claude-code/permissions",
+            "claude-code",
+            "permissions",
+            "Claude Code Permissions",
+            "https://code.claude.com/docs/en/permissions",
+            "https://code.claude.com/docs/en/permissions.md",
+            "markdown",
+            "Anthropic",
+        ),
+        (
+            "claude-code/extensions",
+            "claude-code",
+            "extensions",
+            "Claude Code Features Overview",
+            "https://code.claude.com/docs/en/features-overview",
+            "https://code.claude.com/docs/en/features-overview.md",
+            "markdown",
+            "Anthropic",
+        ),
+        (
+            "claude-code/best-practices",
+            "claude-code",
+            "best-practices",
+            "Claude Code Best Practices",
+            "https://code.claude.com/docs/en/best-practices",
+            "https://code.claude.com/docs/en/best-practices.md",
+            "markdown",
+            "Anthropic",
+        ),
+        (
+            "codex/cli",
+            "codex",
+            "cli",
+            "Codex CLI",
+            "https://learn.chatgpt.com/docs/codex/cli",
+            "https://learn.chatgpt.com/docs/codex/cli",
+            "html",
+            "OpenAI",
+        ),
+        (
+            "codex/prompting",
+            "codex",
+            "prompting",
+            "Codex Prompting",
+            "https://learn.chatgpt.com/docs/prompting",
+            "https://learn.chatgpt.com/docs/prompting.md",
+            "markdown",
+            "OpenAI",
+        ),
+        (
+            "codex/agents-md",
+            "codex",
+            "agents-md",
+            "Codex AGENTS.md",
+            "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
+            "https://learn.chatgpt.com/docs/agent-configuration/agents-md.md",
+            "markdown",
+            "OpenAI",
+        ),
+        (
+            "codex/approvals-security",
+            "codex",
+            "approvals-security",
+            "Codex Agent Approvals and Security",
+            "https://learn.chatgpt.com/docs/agent-approvals-security",
+            "https://learn.chatgpt.com/docs/agent-approvals-security.md",
+            "markdown",
+            "OpenAI",
+        ),
+        (
+            "codex/customization",
+            "codex",
+            "customization",
+            "Codex Customization Overview",
+            "https://learn.chatgpt.com/docs/customization/overview",
+            "https://learn.chatgpt.com/docs/customization/overview.md",
+            "markdown",
+            "OpenAI",
+        ),
+    )
+)
+_MANIFEST_SIZE: Final = 10
+_PRODUCT_ENTRY_SIZE: Final = 5
+
+
+class Source(BaseModel):
+    """Metadata row for one official page source."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(
+        frozen=True,
+        extra="forbid",
+        str_strip_whitespace=True,
+    )
+
+    id: SourceId
+    product: Product
+    slug: str
+    title: str
+    canonical_url: str
+    fetch_url: str
+    fetch_format: FetchFormat
+    owner: Owner
+
+    @field_validator("id", "product", "slug", "title", "owner", "fetch_format", mode="after")
+    @classmethod
+    def _non_empty(cls, value: str, info: ValidationInfo) -> str:
+        if not value:
+            message = f"{info.field_name} must be non-empty"
+            raise ValueError(message)
+        return value
+
+    @field_validator("canonical_url", "fetch_url", mode="after")
+    @classmethod
+    def _require_https(cls, value: str) -> str:
+        parsed = urlparse(value)
+        if parsed.scheme != "https":
+            msg = "source URLs must use HTTPS"
+            raise ValueError(msg)
+        if not parsed.netloc:
+            msg = "source URLs must include a network location"
+            raise ValueError(msg)
+        return value
+
+    @model_validator(mode="after")
+    def _validate_id(self) -> Self:
+        if self.id != SourceId(f"{self.product}/{self.slug}"):
+            msg = "source id must match product and slug"
+            raise ValueError(msg)
+        return self
+
+
+class SourceManifest(RootModel[tuple[Source, ...]]):
+    """Tuple-backed manifest root container."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
+
+    @model_validator(mode="after")
+    def _validate_manifest(self) -> Self:
+        sources = self.root
+        if len(sources) != _MANIFEST_SIZE:
+            msg = "manifest must contain exactly 10 sources"
+            raise ValueError(msg)
+
+        ids = [source.id for source in sources]
+        if len(set(ids)) != len(ids):
+            msg = "source manifest contains duplicate id values"
+            raise ValueError(msg)
+
+        pairs = [(source.product, source.slug) for source in sources]
+        if len(set(pairs)) != len(pairs):
+            msg = "source manifest contains duplicate product/slug combinations"
+            raise ValueError(msg)
+
+        product_counts = Counter(source.product for source in sources)
+        if (
+            product_counts["claude-code"] != _PRODUCT_ENTRY_SIZE
+            or product_counts["codex"] != _PRODUCT_ENTRY_SIZE
+        ):
+            msg = "source manifest must have five entries per product"
+            raise ValueError(msg)
+
+        if frozenset(_identity_tuple(source) for source in sources) != _FROZEN_SOURCE_SET:
+            msg = "source manifest does not match frozen identity set"
+            raise ValueError(msg)
+
+        return self
+
+
+def _identity_tuple(source: Source) -> RowSpec:
+    return (
+        source.id,
+        source.product,
+        source.slug,
+        source.title,
+        source.canonical_url,
+        source.fetch_url,
+        source.fetch_format,
+        source.owner,
+    )
+
+
+class FetchedPage(BaseModel):
+    """Boundary object for fetch output."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(
+        frozen=True,
+        extra="forbid",
+    )
+
+    source_id: SourceId
+    final_url: str
+    content_type: str
+    text: str
+
+    @field_validator("final_url", mode="after")
+    @classmethod
+    def _validate_final_url(cls, value: str) -> str:
+        parsed = urlparse(value)
+        if parsed.scheme != "https":
+            msg = "final_url must use HTTPS"
+            raise ValueError(msg)
+        if not parsed.netloc:
+            msg = "final_url must include a network location"
+            raise ValueError(msg)
+        return value
+
+    @field_validator("content_type", mode="after")
+    @classmethod
+    def _non_empty_content_type(cls, value: str, info: ValidationInfo) -> str:
+        normalized = value.strip()
+        if not normalized:
+            message = f"{info.field_name} must be non-empty"
+            raise ValueError(message)
+        return normalized
+
+    @field_validator("text", mode="after")
+    @classmethod
+    def _non_empty_text(cls, value: str, info: ValidationInfo) -> str:
+        if not value:
+            message = f"{info.field_name} must be non-empty"
+            raise ValueError(message)
+        if not value.strip():
+            message = f"{info.field_name} must contain non-whitespace characters"
+            raise ValueError(message)
+        return value
+
+
+@dataclass(frozen=True, slots=True)
+class NormalizedPage:
+    """Normalized page payload passed between fetch and write boundaries."""
+
+    source: Source
+    markdown: str
+    content_sha256: str

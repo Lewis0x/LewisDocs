@@ -14,3 +14,9 @@ audit_report.csv
 audit_report.md
 lewisdocs_*.html
 .preview-screenshots/
+
+# AI handbook runtime-only inputs, staging, and evidence
+/.ai-local/
+/.ai-content/
+/docs/ai/
+/.superpowers/sdd/
