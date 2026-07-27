@@ -212,14 +212,15 @@ def _translate_chunk(
     try:
         return restore_and_validate(chunk.source, chunk.protected, completion)
     except AIAgentError as error:
-        if (
-            error.reason not in _RETRYABLE_OUTPUT_REASONS
-            or len(chunk.protected.text) <= _MIN_TRANSLATION_CHARS
+        has_multiple_tokens = len(chunk.protected.spans) > 1
+        if error.reason not in _RETRYABLE_OUTPUT_REASONS or (
+            len(chunk.protected.text) <= _MIN_TRANSLATION_CHARS and not has_multiple_tokens
         ):
             raise
 
+        retry_floor = 1 if has_multiple_tokens else _MIN_TRANSLATION_CHARS
         retry_max_chars = max(
-            _MIN_TRANSLATION_CHARS,
+            retry_floor,
             len(chunk.protected.text) // 2,
         )
         retry_chunks = _translation_chunks(chunk.protected, retry_max_chars)
