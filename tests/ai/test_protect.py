@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts.ai.errors import AIAgentError, ErrorCode
+from scripts.ai.errors import AIAgentError, ErrorCode, TranslationFailureReason
 from scripts.ai.protect import (
     ProtectedMarkdown,
     protect_markdown,
@@ -30,11 +30,13 @@ def _assert_translation_failure(
     source: str,
     protected: ProtectedMarkdown,
     translated: str,
+    expected_reason: TranslationFailureReason,
 ) -> None:
     with pytest.raises(AIAgentError) as exc_info:
         _ = restore_and_validate(source, protected, translated)
     assert exc_info.value.code == ErrorCode.TRANSLATION_FAILED  # noqa: S101
     assert exc_info.value.source_id is None  # noqa: S101
+    assert exc_info.value.reason == expected_reason  # noqa: S101
     assert str(exc_info.value) == FAILURE_MESSAGE  # noqa: S101
 
 
@@ -207,7 +209,12 @@ def test_restore_rejects_token_mutations(mutation: str) -> None:
         translated = translated.replace(second, first, 1).replace("TEMP", second, 1)
     else:
         translated = protected.text + "⟦LEWISDOCS_9999⟧"
-    _assert_translation_failure(source, protected, translated)
+    _assert_translation_failure(
+        source,
+        protected,
+        translated,
+        TranslationFailureReason.OUTPUT_TOKEN_INVALID,
+    )
 
 
 @pytest.mark.parametrize(
@@ -226,6 +233,7 @@ def test_restore_rejects_markdown_structure_changes(before: str, after: str) -> 
         source,
         protected,
         protected.text.replace(before, after, 1),
+        TranslationFailureReason.OUTPUT_STRUCTURE_INVALID,
     )
 
 
@@ -233,4 +241,9 @@ def test_restore_rejects_new_protected_literal() -> None:
     """Reject a translated payload that invents a protected identifier."""
     source, _, protected = _fixture()
     translated = protected.text.replace("plain prose", "NEW_CONFIG")
-    _assert_translation_failure(source, protected, translated)
+    _assert_translation_failure(
+        source,
+        protected,
+        translated,
+        TranslationFailureReason.OUTPUT_LITERAL_INVALID,
+    )

@@ -34,6 +34,9 @@ class TranslationFailureReason(StrEnum):
     TRANSPORT = "transport"
     RESPONSE_INVALID = "response_invalid"
     OUTPUT_INVALID = "output_invalid"
+    OUTPUT_TOKEN_INVALID = "output_token_invalid"  # noqa: S105
+    OUTPUT_STRUCTURE_INVALID = "output_structure_invalid"
+    OUTPUT_LITERAL_INVALID = "output_literal_invalid"
 
 
 class AIAgentError(Exception):

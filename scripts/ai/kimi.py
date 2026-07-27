@@ -154,10 +154,10 @@ def translate_markdown(client: httpx2.Client, request: TranslationInput) -> str:
         _ = response.raise_for_status()
         completion = KimiResponse.model_validate_json(response.content).choices[0].message.content
         return restore_and_validate(request.markdown, protected, completion)
-    except AIAgentError:
+    except AIAgentError as error:
         _raise_translation_failed(
             request.source_id,
-            TranslationFailureReason.OUTPUT_INVALID,
+            error.reason or TranslationFailureReason.OUTPUT_INVALID,
         )
     except httpx2.HTTPStatusError as error:
         _raise_translation_failed(
