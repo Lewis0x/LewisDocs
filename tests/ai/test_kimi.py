@@ -660,6 +660,7 @@ def test_runtime_secret_is_absent_from_output_files_and_diff(
         check=False,
         capture_output=True,
         text=True,
+        encoding="utf-8",
     )
     assert diff.returncode == 0  # noqa: S101
     assert sentinel not in diff.stdout + diff.stderr  # noqa: S101

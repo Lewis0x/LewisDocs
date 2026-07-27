@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Final, NoReturn
 
 from scripts.ai.errors import AIAgentError, ErrorCode
 from scripts.ai.manifest import load_sources
-from scripts.ai.pages import validate_candidate, validate_english_candidate
+from scripts.ai.pages import validate_publishable_candidate
 from scripts.ai.protect import protect_markdown
 from scripts.ai.sync_contracts import SyncOptions
 from scripts.ai.sync_transaction import validate_content_root
@@ -64,36 +64,25 @@ def materialize_ai(options: MaterializeOptions) -> tuple[MaterializedRoute, ...]
     """Derive validated public content into the VitePress source tree."""
     content_root = _validated_content_root(options)
     manifest = load_sources(options.manifest_path)
-    bilingual = (content_root / "zh-CN").is_dir()
-    if bilingual:
-        validate_candidate(
-            managed_root=content_root,
-            learning_root=content_root / "learn",
-            manifest=manifest,
-        )
-    else:
-        validate_english_candidate(managed_root=content_root, manifest=manifest)
+    translated = validate_publishable_candidate(
+        managed_root=content_root,
+        manifest=manifest,
+    )
     _require_derived_target(options)
     source_routes = tuple(
         MaterializedRoute(
             source_id=source.id,
             lang=lang,
             route=f"/ai/{lang}/{source.product}/{source.slug}",
-            counterpart=f"/ai/{'zh-CN' if lang == 'en' else 'en'}/{source.product}/{source.slug}",
+            counterpart=(
+                f"/ai/{'zh-CN' if lang == 'en' else 'en'}/{source.product}/{source.slug}"
+                if source.id in translated
+                else None
+            ),
         )
         for source in manifest.root
-        for lang in (("en", "zh-CN") if bilingual else ("en",))
+        for lang in (("en", "zh-CN") if source.id in translated else ("en",))
     )
-    if not bilingual:
-        source_routes = tuple(
-            MaterializedRoute(
-                source_id=route.source_id,
-                lang=route.lang,
-                route=route.route,
-                counterpart=None,
-            )
-            for route in source_routes
-        )
     learning_routes = tuple(
         MaterializedRoute(
             source_id=None,
@@ -102,7 +91,7 @@ def materialize_ai(options: MaterializeOptions) -> tuple[MaterializedRoute, ...]
             counterpart=None,
         )
         for product in ("claude-code", "codex")
-    ) if bilingual else ()
+    ) if translated else ()
     routes = source_routes + learning_routes
     _replace_derived_tree(options, content_root, routes)
     return routes

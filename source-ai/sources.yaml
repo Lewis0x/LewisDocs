@@ -50,6 +50,56 @@
     "owner": "Anthropic"
   },
   {
+    "id": "claude-code/how-it-works",
+    "product": "claude-code",
+    "slug": "how-it-works",
+    "title": "How Claude Code Works",
+    "canonical_url": "https://code.claude.com/docs/en/how-claude-code-works",
+    "fetch_url": "https://code.claude.com/docs/en/how-claude-code-works.md",
+    "fetch_format": "markdown",
+    "owner": "Anthropic"
+  },
+  {
+    "id": "claude-code/common-workflows",
+    "product": "claude-code",
+    "slug": "common-workflows",
+    "title": "Claude Code Common Workflows",
+    "canonical_url": "https://code.claude.com/docs/en/common-workflows",
+    "fetch_url": "https://code.claude.com/docs/en/common-workflows.md",
+    "fetch_format": "markdown",
+    "owner": "Anthropic"
+  },
+  {
+    "id": "claude-code/hooks-guide",
+    "product": "claude-code",
+    "slug": "hooks-guide",
+    "title": "Automate Actions with Claude Code Hooks",
+    "canonical_url": "https://code.claude.com/docs/en/hooks-guide",
+    "fetch_url": "https://code.claude.com/docs/en/hooks-guide.md",
+    "fetch_format": "markdown",
+    "owner": "Anthropic"
+  },
+  {
+    "id": "claude-code/mcp",
+    "product": "claude-code",
+    "slug": "mcp",
+    "title": "Connect Claude Code to Tools via MCP",
+    "canonical_url": "https://code.claude.com/docs/en/mcp",
+    "fetch_url": "https://code.claude.com/docs/en/mcp.md",
+    "fetch_format": "markdown",
+    "owner": "Anthropic"
+  },
+  {
+    "id": "claude-code/subagents",
+    "product": "claude-code",
+    "slug": "subagents",
+    "title": "Create Custom Claude Code Subagents",
+    "canonical_url": "https://code.claude.com/docs/en/sub-agents",
+    "fetch_url": "https://code.claude.com/docs/en/sub-agents.md",
+    "fetch_format": "markdown",
+    "owner": "Anthropic"
+  },
+  {
     "id": "codex/cli",
     "product": "codex",
     "slug": "cli",
@@ -96,6 +146,56 @@
     "title": "Codex Customization Overview",
     "canonical_url": "https://learn.chatgpt.com/docs/customization/overview",
     "fetch_url": "https://learn.chatgpt.com/docs/customization/overview.md",
+    "fetch_format": "markdown",
+    "owner": "OpenAI"
+  },
+  {
+    "id": "codex/best-practices",
+    "product": "codex",
+    "slug": "best-practices",
+    "title": "Codex Best Practices",
+    "canonical_url": "https://developers.openai.com/codex/learn/best-practices",
+    "fetch_url": "https://learn.chatgpt.com/guides/best-practices",
+    "fetch_format": "html",
+    "owner": "OpenAI"
+  },
+  {
+    "id": "codex/ide",
+    "product": "codex",
+    "slug": "ide",
+    "title": "Codex IDE Extension",
+    "canonical_url": "https://developers.openai.com/codex/ide",
+    "fetch_url": "https://learn.chatgpt.com/docs/codex/ide",
+    "fetch_format": "html",
+    "owner": "OpenAI"
+  },
+  {
+    "id": "codex/cloud",
+    "product": "codex",
+    "slug": "cloud",
+    "title": "Codex Cloud",
+    "canonical_url": "https://developers.openai.com/codex/cloud",
+    "fetch_url": "https://learn.chatgpt.com/docs/cloud",
+    "fetch_format": "html",
+    "owner": "OpenAI"
+  },
+  {
+    "id": "codex/mcp",
+    "product": "codex",
+    "slug": "mcp",
+    "title": "Codex Model Context Protocol",
+    "canonical_url": "https://developers.openai.com/codex/extend/mcp",
+    "fetch_url": "https://learn.chatgpt.com/docs/extend/mcp.md",
+    "fetch_format": "markdown",
+    "owner": "OpenAI"
+  },
+  {
+    "id": "codex/github-action",
+    "product": "codex",
+    "slug": "github-action",
+    "title": "Codex GitHub Action",
+    "canonical_url": "https://developers.openai.com/codex/github-action",
+    "fetch_url": "https://learn.chatgpt.com/docs/github-action.md",
     "fetch_format": "markdown",
     "owner": "OpenAI"
   }

@@ -237,6 +237,7 @@ def test_run_ai_selector_discards_relative_probe_path() -> None:
             ],
             cwd=cwd,
             text=True,
+            encoding="utf-8",
             capture_output=True,
             check=False,
         )

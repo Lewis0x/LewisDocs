@@ -18,7 +18,6 @@ if TYPE_CHECKING:
 
     from scripts.ai.types import Source, SourceId, SourceManifest
 
-_PAGE_COUNT: Final = 10
 _MARKDOWN_LINK_RE: Final = re.compile(r"\]\(([^)\s]+)\)")
 _EN_CLAIM_SUBJECT: Final = (
     r"(?:\b(?:this|our|the)\s+(?:mirror|site|translation|team)\b|\blewisdocs\b)"
@@ -88,12 +87,56 @@ def validate_english_candidate(
                 _fail(source.id)
             pages[page.source_id] = page
             _validate_english(source, page)
-        if len(pages) != _PAGE_COUNT:
+        if len(pages) != len(manifest.root):
             _fail()
     except AIAgentError:
         raise
     except (OSError, UnicodeDecodeError, ValidationError, ValueError) as exc:
         _fail(cause=exc)
+
+
+def validate_publishable_candidate(
+    *,
+    managed_root: Path,
+    manifest: SourceManifest,
+) -> frozenset[SourceId]:
+    """Validate exact English pages plus the currently available Chinese subset."""
+    try:
+        _require_directory(managed_root)
+        expected_root = {"en", "learn"}
+        chinese_root = managed_root / "zh-CN"
+        if chinese_root.exists():
+            expected_root.add("zh-CN")
+        if {path.name for path in managed_root.iterdir()} != expected_root:
+            _fail()
+
+        english = _parse_language(
+            managed_root / "en",
+            manifest,
+            language="en",
+            exact=True,
+        )
+        for source in manifest.root:
+            _validate_english(source, english[source.id])
+
+        translated: frozenset[SourceId] = frozenset()
+        if chinese_root.exists():
+            chinese = _parse_language(
+                chinese_root,
+                manifest,
+                language="zh-CN",
+                exact=False,
+            )
+            by_id = {source.id: source for source in manifest.root}
+            for source_id, page in chinese.items():
+                _validate_pair(by_id[source_id], english[source_id], page)
+            translated = frozenset(chinese)
+            _validate_learning(managed_root / "learn", manifest, translated)
+    except AIAgentError:
+        raise
+    except (OSError, UnicodeDecodeError, ValidationError, ValueError) as exc:
+        _fail(cause=exc)
+    return translated
 
 
 def _parse_managed_pages(
@@ -106,32 +149,48 @@ def _parse_managed_pages(
     expected_root = {"en", "zh-CN", "learn"} if allow_learning else {"en", "zh-CN"}
     if {path.name for path in root.iterdir()} != expected_root:
         _fail()
-    english: dict[SourceId, AcceptedPage] = {}
-    chinese: dict[SourceId, AcceptedPage] = {}
-    for language, destination in (("en", english), ("zh-CN", chinese)):
-        language_root = root / language
-        _require_directory(language_root)
-        if {path.name for path in language_root.iterdir()} != {"claude-code", "codex"}:
-            _fail()
-        for source in manifest.root:
-            product_root = language_root / source.product
-            _require_directory(product_root)
-            expected = {
-                item.slug + ".md" for item in manifest.root if item.product == source.product
-            }
-            if {path.name for path in product_root.iterdir()} != expected:
-                _fail(source.id)
-            page_path = product_root / f"{source.slug}.md"
-            _require_regular_file(page_path, source.id)
-            page = parse_accepted_page(page_path)
-            if page.source_id != source.id:
-                _fail(source.id)
-            if page.source_id in destination:
-                _fail(page.source_id)
-            destination[page.source_id] = page
-    if len(english) != _PAGE_COUNT or len(chinese) != _PAGE_COUNT:
+    english = _parse_language(root / "en", manifest, language="en", exact=True)
+    chinese = _parse_language(root / "zh-CN", manifest, language="zh-CN", exact=True)
+    if len(english) != len(manifest.root) or len(chinese) != len(manifest.root):
         _fail()
     return english, chinese
+
+
+def _parse_language(
+    language_root: Path,
+    manifest: SourceManifest,
+    *,
+    language: str,
+    exact: bool,
+) -> dict[SourceId, AcceptedPage]:
+    _require_directory(language_root)
+    products = {source.product for source in manifest.root}
+    if {path.name for path in language_root.iterdir()} != products:
+        _fail()
+    pages: dict[SourceId, AcceptedPage] = {}
+    for product in products:
+        product_root = language_root / product
+        _require_directory(product_root)
+        sources = {
+            source.slug + ".md": source
+            for source in manifest.root
+            if source.product == product
+        }
+        entries = {path.name: path for path in product_root.iterdir()}
+        if (exact and entries.keys() != sources.keys()) or not entries.keys() <= sources.keys():
+            _fail()
+        for name, path in entries.items():
+            source = sources[name]
+            _require_regular_file(path, source.id)
+            page = parse_accepted_page(path)
+            if (
+                page.source_id != source.id
+                or page.lang != language
+                or page.source_id in pages
+            ):
+                _fail(source.id)
+            pages[page.source_id] = page
+    return pages
 
 
 def _validate_pair(source: Source, english: AcceptedPage, chinese: AcceptedPage) -> None:
@@ -179,7 +238,11 @@ def _validate_english(source: Source, english: AcceptedPage) -> None:
         _fail(source.id)
 
 
-def _validate_learning(root: Path, manifest: SourceManifest) -> None:
+def _validate_learning(
+    root: Path,
+    manifest: SourceManifest,
+    translated: frozenset[SourceId] | None = None,
+) -> None:
     _require_directory(root)
     if {path.name for path in root.iterdir()} != {"zh-CN"}:
         _fail()
@@ -195,6 +258,7 @@ def _validate_learning(root: Path, manifest: SourceManifest) -> None:
             f"/ai/zh-CN/{source.product}/{source.slug}"
             for source in manifest.root
             if source.product == product
+            and (translated is None or source.id in translated)
         )
         if links != expected:
             _fail()

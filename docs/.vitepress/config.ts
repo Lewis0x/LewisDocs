@@ -2,22 +2,38 @@ import { existsSync } from 'node:fs'
 import { withMermaid } from 'vitepress-plugin-mermaid'
 import { createSearchRenderer } from './search-render.mjs'
 
-const HAS_AI_TRANSLATIONS = existsSync(
-  new URL('../../source-ai/content/zh-CN', import.meta.url),
-)
-
 const AI_SOURCES = [
   { product: 'claude-code', slug: 'quickstart', title: 'Claude Code Quickstart' },
   { product: 'claude-code', slug: 'memory', title: 'Claude Code Memory' },
   { product: 'claude-code', slug: 'permissions', title: 'Claude Code Permissions' },
   { product: 'claude-code', slug: 'extensions', title: 'Claude Code Features Overview' },
   { product: 'claude-code', slug: 'best-practices', title: 'Claude Code Best Practices' },
+  { product: 'claude-code', slug: 'how-it-works', title: 'How Claude Code Works' },
+  { product: 'claude-code', slug: 'common-workflows', title: 'Claude Code Common Workflows' },
+  { product: 'claude-code', slug: 'hooks-guide', title: 'Automate Actions with Claude Code Hooks' },
+  { product: 'claude-code', slug: 'mcp', title: 'Connect Claude Code to Tools via MCP' },
+  { product: 'claude-code', slug: 'subagents', title: 'Create Custom Claude Code Subagents' },
   { product: 'codex', slug: 'cli', title: 'Codex CLI' },
   { product: 'codex', slug: 'prompting', title: 'Codex Prompting' },
   { product: 'codex', slug: 'agents-md', title: 'Codex AGENTS.md' },
   { product: 'codex', slug: 'approvals-security', title: 'Codex Agent Approvals and Security' },
   { product: 'codex', slug: 'customization', title: 'Codex Customization Overview' },
-] as const
+  { product: 'codex', slug: 'best-practices', title: 'Codex Best Practices' },
+  { product: 'codex', slug: 'ide', title: 'Codex IDE Extension' },
+  { product: 'codex', slug: 'cloud', title: 'Codex Cloud' },
+  { product: 'codex', slug: 'mcp', title: 'Codex Model Context Protocol' },
+  { product: 'codex', slug: 'github-action', title: 'Codex GitHub Action' },
+].map((source) => ({
+  ...source,
+  translated: existsSync(
+    new URL(
+      `../../source-ai/content/zh-CN/${source.product}/${source.slug}.md`,
+      import.meta.url,
+    ),
+  ),
+}))
+
+const HAS_AI_TRANSLATIONS = AI_SOURCES.some((source) => source.translated)
 
 const renderAiSearch = createSearchRenderer(true)
 
@@ -176,7 +192,7 @@ export default withMermaid({
               text: `中文 · ${source.title}`,
               link: `/ai/zh-CN/${source.product}/${source.slug}`,
             }
-            return HAS_AI_TRANSLATIONS ? [english, chinese] : [english]
+            return source.translated ? [english, chinese] : [english]
           }),
         ],
       },

@@ -1,4 +1,4 @@
-# ruff: noqa: CPY001,D100,D103,INP001,PLR2004,S101,S607
+# ruff: noqa: CPY001,D100,D103,INP001,S101,S607
 
 from __future__ import annotations
 
@@ -53,7 +53,7 @@ def _materialize(temporary: Path, private: Path) -> Path:
     routes = materialize_ai(
         MaterializeOptions(repository, private, repository / "docs" / "ai", MANIFEST_PATH)
     )
-    assert len(routes) == 22
+    assert len(routes) == len(load_sources(MANIFEST_PATH).root) * 2 + 2
     return repository / "docs" / "ai"
 
 

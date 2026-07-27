@@ -19,7 +19,7 @@ from scripts.ai.types import FetchedPage, SourceId, SourceManifest
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCES_FILE = ROOT / "source-ai" / "sources.yaml"
-MANIFEST_SIZE = 10
+MANIFEST_SIZE = 20
 
 ManifestRow = dict[str, str]
 Mutation = Callable[[list[ManifestRow]], None]

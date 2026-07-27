@@ -25,6 +25,7 @@ _MARKDOWN_COMMENT_RE: Final = re.compile(
     r"^\s*<!--\s*(?:fetched-at|source-url)\b[^>]*-->\s*$",
     re.IGNORECASE,
 )
+_H1_RE: Final = re.compile(r"(?m)^#\s+\S")
 
 
 def normalize_source(*, source: Source, fetched: FetchedPage) -> NormalizedPage:
@@ -41,6 +42,8 @@ def normalize_source(*, source: Source, fetched: FetchedPage) -> NormalizedPage:
             if content_type not in _HTML_CONTENT_TYPES:
                 _raise_normalize_error(source)
             markdown = normalize_html_content(fetched.text)
+            if _H1_RE.search(markdown) is None:
+                markdown = f"# {source.title}\n\n{markdown}"
         return NormalizedPage(
             source=source,
             markdown=markdown,

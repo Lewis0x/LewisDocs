@@ -18,6 +18,7 @@ from scripts.ai.pages import (
     render_chinese_page,
     render_english_page,
     validate_candidate,
+    validate_publishable_candidate,
 )
 from scripts.ai.types import NormalizedPage, Source, SourceManifest
 
@@ -53,10 +54,19 @@ def _write_candidate(root: Path, manifest: SourceManifest = MANIFEST) -> None:
         _ = chinese_path.write_bytes(render_chinese_page(normalized, _translated(source)))
 
 
-def _write_learning(root: Path, manifest: SourceManifest = MANIFEST) -> None:
+def _write_learning(
+    root: Path,
+    manifest: SourceManifest = MANIFEST,
+    translated: frozenset[str] | None = None,
+) -> None:
     """Write the two read-only Chinese learning pages with exact routes."""
     for product in ("claude-code", "codex"):
-        sources = [source for source in manifest.root if source.product == product]
+        sources = [
+            source
+            for source in manifest.root
+            if source.product == product
+            and (translated is None or source.id in translated)
+        ]
         routes = "\n".join(
             f"- [页面](/ai/zh-CN/{source.product}/{source.slug})" for source in sources
         )
@@ -219,6 +229,47 @@ def test_validate_candidate_accepts_exact_pairs_and_preserves_learning_snapshot(
         )
     )
     assert before == after  # noqa: S101
+
+
+def test_validate_publishable_candidate_accepts_exact_english_and_chinese_subset(
+    tmp_path: Path,
+) -> None:
+    """Allow an English expansion without publishing missing Chinese routes."""
+    managed_root, _ = _complete_roots(tmp_path)
+    missing = MANIFEST.root[-1]
+    (managed_root / "zh-CN" / missing.product / f"{missing.slug}.md").unlink()
+    translated = frozenset(
+        str(source.id) for source in MANIFEST.root if source.id != missing.id
+    )
+    _write_learning(managed_root / "learn", translated=translated)
+
+    available = validate_publishable_candidate(
+        managed_root=managed_root,
+        manifest=MANIFEST,
+    )
+
+    assert available == translated  # noqa: S101
+    with pytest.raises(AIAgentError):
+        validate_candidate(
+            managed_root=managed_root,
+            learning_root=managed_root / "learn",
+            manifest=MANIFEST,
+        )
+
+
+def test_validate_publishable_candidate_rejects_unknown_chinese_page(tmp_path: Path) -> None:
+    """Reject a translated page that does not correspond to the manifest."""
+    managed_root, _ = _complete_roots(tmp_path)
+    _ = (managed_root / "zh-CN" / "codex" / "orphan.md").write_text(
+        "orphan\n",
+        encoding="utf-8",
+    )
+    _write_learning(managed_root / "learn")
+
+    with pytest.raises(AIAgentError) as exc_info:
+        _ = validate_publishable_candidate(managed_root=managed_root, manifest=MANIFEST)
+
+    assert exc_info.value.code == ErrorCode.VALIDATION_FAILED  # noqa: S101
 
 
 @pytest.mark.parametrize(

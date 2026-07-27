@@ -1,5 +1,5 @@
 # Copyright 2026
-# ruff: noqa: INP001,PLR2004,S101
+# ruff: noqa: INP001,S101
 
 """Internal AI build inventory verification tests."""
 
@@ -18,12 +18,25 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = REPO_ROOT / "source-ai" / "sources.yaml"
 
 
-def _routes(*, bilingual: bool = True) -> tuple[str, ...]:
+def _routes(
+    *,
+    bilingual: bool = True,
+    translated_ids: frozenset[str] | None = None,
+) -> tuple[str, ...]:
     manifest = load_sources(MANIFEST_PATH)
     english = tuple(f"/ai/en/{source.product}/{source.slug}" for source in manifest.root)
     if not bilingual:
         return english
-    chinese = tuple(f"/ai/zh-CN/{source.product}/{source.slug}" for source in manifest.root)
+    translated = (
+        frozenset(str(source.id) for source in manifest.root)
+        if translated_ids is None
+        else translated_ids
+    )
+    chinese = tuple(
+        f"/ai/zh-CN/{source.product}/{source.slug}"
+        for source in manifest.root
+        if source.id in translated
+    )
     return (*english, *chinese, "/ai/zh-CN/learn/claude-code", "/ai/zh-CN/learn/codex")
 
 
@@ -64,11 +77,27 @@ def _install_dist(dist: Path, routes: tuple[str, ...], *, labels: bool = True) -
     )
 
 
-def _options(tmp_path: Path, *, bilingual: bool = True) -> VerifyBuildOptions:
+def _options(
+    tmp_path: Path,
+    *,
+    bilingual: bool = True,
+    translated_ids: frozenset[str] | None = None,
+) -> VerifyBuildOptions:
     content_root = tmp_path / "content"
     (content_root / "en").mkdir(parents=True)
     if bilingual:
-        (content_root / "zh-CN").mkdir()
+        manifest = load_sources(MANIFEST_PATH)
+        translated = (
+            frozenset(str(source.id) for source in manifest.root)
+            if translated_ids is None
+            else translated_ids
+        )
+        for source in manifest.root:
+            if source.id not in translated:
+                continue
+            path = content_root / "zh-CN" / source.product / f"{source.slug}.md"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            _ = path.write_text("translated\n", encoding="utf-8")
     return VerifyBuildOptions(
         repo_root=REPO_ROOT,
         dist_root=tmp_path / "dist",
@@ -87,13 +116,26 @@ def test_verify_dist_accepts_exact_html_and_search_inventory(tmp_path: Path) -> 
     verify_dist(options)
 
     # Then
-    assert len(tuple((options.dist_root / "ai").rglob("*.html"))) == 22
+    assert len(tuple((options.dist_root / "ai").rglob("*.html"))) == len(_routes())
 
 
 def test_verify_dist_accepts_exact_english_preview_inventory(tmp_path: Path) -> None:
     """Accept exactly ten English routes when translated content is not present."""
     options = _options(tmp_path, bilingual=False)
     routes = _routes(bilingual=False)
+    _install_dist(options.dist_root, routes)
+
+    verify_dist(options)
+
+    assert len(tuple((options.dist_root / "ai").rglob("*.html"))) == len(routes)
+
+
+def test_verify_dist_accepts_partial_chinese_inventory(tmp_path: Path) -> None:
+    """Verify only the Chinese routes that have accepted source files."""
+    manifest = load_sources(MANIFEST_PATH)
+    translated = frozenset(str(source.id) for source in manifest.root[:-1])
+    options = _options(tmp_path, translated_ids=translated)
+    routes = _routes(translated_ids=translated)
     _install_dist(options.dist_root, routes)
 
     verify_dist(options)

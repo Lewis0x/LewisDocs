@@ -46,10 +46,10 @@ def verify_dist(options: VerifyBuildOptions) -> None:
     """Verify the public HTML and local-search route inventory."""
     try:
         manifest = load_sources(options.manifest_path)
-        bilingual = (options.content_root / "zh-CN").is_dir()
         if not (options.content_root / "en").is_dir():
             _validation_failed()
-        expected = _expected_routes(manifest, bilingual=bilingual)
+        translated = _translated_sources(options.content_root, manifest)
+        expected = _expected_routes(manifest, translated=translated)
         html_routes = frozenset(
             f"/{path.relative_to(options.dist_root).with_suffix('').as_posix()}"
             for path in (options.dist_root / "ai").rglob("*.html")
@@ -68,7 +68,7 @@ def verify_dist(options: VerifyBuildOptions) -> None:
         titles = tuple(field.title for field in search.stored_fields.values() if field.title)
         if not any(title.startswith("EN · ") for title in titles):
             _validation_failed()
-        if bilingual and not any(title.startswith("中文 · ") for title in titles):
+        if translated and not any(title.startswith("中文 · ") for title in titles):
             _validation_failed()
     except AIAgentError:
         raise
@@ -95,13 +95,35 @@ def main() -> int:
     return 0
 
 
-def _expected_routes(manifest: SourceManifest, *, bilingual: bool) -> frozenset[str]:
+def _expected_routes(
+    manifest: SourceManifest,
+    *,
+    translated: frozenset[str],
+) -> frozenset[str]:
     english = tuple(f"/ai/en/{source.product}/{source.slug}" for source in manifest.root)
-    if not bilingual:
+    if not translated:
         return frozenset(english)
-    chinese = tuple(f"/ai/zh-CN/{source.product}/{source.slug}" for source in manifest.root)
+    chinese = tuple(
+        f"/ai/zh-CN/{source.product}/{source.slug}"
+        for source in manifest.root
+        if source.id in translated
+    )
     return frozenset(
         (*english, *chinese, "/ai/zh-CN/learn/claude-code", "/ai/zh-CN/learn/codex")
+    )
+
+
+def _translated_sources(
+    content_root: Path,
+    manifest: SourceManifest,
+) -> frozenset[str]:
+    chinese_root = content_root / "zh-CN"
+    if not chinese_root.is_dir():
+        return frozenset()
+    return frozenset(
+        str(source.id)
+        for source in manifest.root
+        if (chinese_root / source.product / f"{source.slug}.md").is_file()
     )
 
 
