@@ -520,6 +520,19 @@ def test_normalize_html_exact_fixture_round_trip() -> None:
     assert normalized.markdown.endswith(EXPECTED_FINAL_NEWLINE)  # noqa: S101
 
 
+def test_normalize_html_prepends_manifest_title_when_article_has_no_h1() -> None:
+    """Keep server-rendered component pages readable when their H1 is outside the article."""
+    source = _source_by_fetch_format("html")
+    raw = '<html><body><article id="mainContent"><p>Full guide body.</p></article></body></html>'
+
+    normalized = normalize_source(
+        source=source,
+        fetched=_fetched_page(source, raw, content_type="text/html"),
+    )
+
+    assert normalized.markdown == f"# {source.title}\n\nFull guide body.\n"  # noqa: S101
+
+
 def test_normalize_html_sibling_noise_absent() -> None:
     """Ensure sibling nav/footer/script/style are never included in article extraction."""
     source = _source_by_fetch_format("html")

@@ -1,4 +1,4 @@
-# ruff: noqa: CPY001,D100,D103,INP001,PLR2004,RUF001,S101
+# ruff: noqa: CPY001,D100,D103,INP001,RUF001,S101
 
 from __future__ import annotations
 
@@ -38,11 +38,21 @@ SOURCE_IDS = (
     "claude-code/permissions",
     "claude-code/extensions",
     "claude-code/best-practices",
+    "claude-code/how-it-works",
+    "claude-code/common-workflows",
+    "claude-code/hooks-guide",
+    "claude-code/mcp",
+    "claude-code/subagents",
     "codex/cli",
     "codex/prompting",
     "codex/agents-md",
     "codex/approvals-security",
     "codex/customization",
+    "codex/best-practices",
+    "codex/ide",
+    "codex/cloud",
+    "codex/mcp",
+    "codex/github-action",
 )
 ROUTES = frozenset(
     f"/ai/{language}/{source_id}" for source_id in SOURCE_IDS for language in ("en", "zh-CN")
@@ -92,18 +102,23 @@ def test_ac1_ac2_ac7_exact_pairs_routes_links_learning_and_cad(tmp_path: Path) -
     routes = materialize_ai(
         MaterializeOptions(repository, private, repository / "docs" / "ai", MANIFEST_PATH)
     )
-    assert len(routes) == 22
+    assert len(routes) == len(SOURCE_IDS) * 2 + 2
     assert {route.route for route in routes} == ROUTES
     for source in manifest.root:
         en = f"/ai/en/{source.product}/{source.slug}"
         zh = f"/ai/zh-CN/{source.product}/{source.slug}"
         assert next(route for route in routes if route.route == en).counterpart == zh
         assert next(route for route in routes if route.route == zh).counterpart == en
-        assert f"ai_counterpart: {zh}" in (repository / "docs" / "ai" / f"{en[4:]}.md").read_text()
-        assert f"ai_counterpart: {en}" in (repository / "docs" / "ai" / f"{zh[4:]}.md").read_text()
+        assert f"ai_counterpart: {zh}" in (
+            repository / "docs" / "ai" / f"{en[4:]}.md"
+        ).read_text(encoding="utf-8")
+        assert f"ai_counterpart: {en}" in (
+            repository / "docs" / "ai" / f"{zh[4:]}.md"
+        ).read_text(encoding="utf-8")
     for product in ("claude-code", "codex"):
         links = (private / "learn" / "zh-CN" / f"{product}.md").read_text(encoding="utf-8")
-        assert links.count("](/ai/zh-CN/") == 5
+        expected_count = sum(source.product == product for source in manifest.root)
+        assert links.count("](/ai/zh-CN/") == expected_count
         assert all(
             f"/ai/zh-CN/{product}/{source.slug}" in links
             for source in manifest.root
@@ -130,10 +145,12 @@ def test_ac1_ac2_ac7_exact_pairs_routes_links_learning_and_cad(tmp_path: Path) -
     assert cad["target_route"] == "/platforms/autocad"
     assert cad["target_anchor"] == "二、api-整体架构-六层金字塔"
     expected_link = f"[{cad['text']}]({cad['target_route']}#{cad['target_anchor']})"
-    assert expected_link in (ROOT / "docs" / "platforms" / "bricscad.md").read_text()
+    assert expected_link in (ROOT / "docs" / "platforms" / "bricscad.md").read_text(
+        encoding="utf-8"
+    )
     assert (
         "## 二、API 整体架构：六层金字塔"
-        in (ROOT / "docs" / "platforms" / "autocad.md").read_text()
+        in (ROOT / "docs" / "platforms" / "autocad.md").read_text(encoding="utf-8")
     )
     assert all(
         path.relative_to(ROOT / "docs").parts[0] != "ai"

@@ -1,5 +1,5 @@
 # Copyright 2026
-# ruff: noqa: EM101,INP001,PLR2004,S101,TRY003
+# ruff: noqa: EM101,INP001,S101,TRY003
 
 """Private accepted-content materialization tests."""
 
@@ -81,7 +81,7 @@ def test_materialize_derives_exact_routes_and_preserves_accepted_content(
     routes = materialize_ai(options)
 
     # Then
-    assert len(routes) == 22
+    assert len(routes) == len(manifest.root) * 2 + 2
     assert {route.route for route in routes} == {
         *{
             f"/ai/{lang}/{source.product}/{source.slug}"
@@ -130,6 +130,43 @@ def test_materialize_derives_exact_routes_and_preserves_accepted_content(
     assert not tuple((options.repo_root / ".ai-local").glob(".ai-retired-*"))
 
 
+def test_materialize_publishes_all_english_and_only_available_chinese(
+    tmp_path: Path,
+) -> None:
+    """Keep existing Chinese pages live while a larger English set is reviewed."""
+    manifest = load_sources(MANIFEST_PATH)
+    content = tmp_path / "private"
+    pages = normalized_pages(manifest)
+    install_content(content, pages)
+    missing = manifest.root[-1]
+    (content / "zh-CN" / missing.product / f"{missing.slug}.md").unlink()
+    for product in ("claude-code", "codex"):
+        routes = "\n".join(
+            f"- [Page](/ai/zh-CN/{page.source.product}/{page.source.slug})"
+            for page in pages
+            if page.source.product == product and page.source.id != missing.id
+        )
+        _ = (content / "learn" / "zh-CN" / f"{product}.md").write_text(
+            f"# Learning\n\n{routes}\n",
+            encoding="utf-8",
+            newline="\n",
+        )
+    options = _options(tmp_path, content)
+
+    routes = materialize_ai(options)
+    by_route = {route.route: route for route in routes}
+    missing_en = f"/ai/en/{missing.product}/{missing.slug}"
+    missing_zh = f"/ai/zh-CN/{missing.product}/{missing.slug}"
+
+    assert len(routes) == len(manifest.root) * 2 + 1
+    assert missing_en in by_route
+    assert by_route[missing_en].counterpart is None
+    assert missing_zh not in by_route
+    assert not (
+        options.docs_ai_root / "zh-CN" / missing.product / f"{missing.slug}.md"
+    ).exists()
+
+
 def test_fixture_learning_paths_are_readable_spec_examples(tmp_path: Path) -> None:
     """Keep synthetic learning fixtures representative and readable."""
     manifest = load_sources(MANIFEST_PATH)
@@ -141,7 +178,8 @@ def test_fixture_learning_paths_are_readable_spec_examples(tmp_path: Path) -> No
         assert text.startswith("# ")
         assert "适合谁阅读：" in text  # noqa: RUF001
         assert "## 推荐阅读顺序" in text
-        assert text.count("学习目标：") == 5  # noqa: RUF001
+        expected = sum(source.product == product for source in manifest.root)
+        assert text.count("学习目标：") == expected  # noqa: RUF001
         assert "遇到歧义时，请切换到对应英文页核对。" in text  # noqa: RUF001
 
 
@@ -208,7 +246,7 @@ def test_materialize_keeps_promoted_tree_when_retired_backup_cleanup_fails(
     assert exc_info.value.code == ErrorCode.WRITE_FAILED
     assert cleanup_failed
     assert not sentinel.exists()
-    assert len(tuple(options.docs_ai_root.rglob("*.md"))) == 22
+    assert len(tuple(options.docs_ai_root.rglob("*.md"))) == len(manifest.root) * 2 + 2
     assert not tuple(options.docs_ai_root.parent.glob(".ai-backup-*"))
     retired = tuple((options.repo_root / ".ai-local").glob(".ai-retired-*"))
     assert len(retired) == 1

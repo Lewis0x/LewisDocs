@@ -78,6 +78,56 @@ _FROZEN_SOURCE_SET: Final[frozenset[RowSpec]] = frozenset(
             "Anthropic",
         ),
         (
+            "claude-code/how-it-works",
+            "claude-code",
+            "how-it-works",
+            "How Claude Code Works",
+            "https://code.claude.com/docs/en/how-claude-code-works",
+            "https://code.claude.com/docs/en/how-claude-code-works.md",
+            "markdown",
+            "Anthropic",
+        ),
+        (
+            "claude-code/common-workflows",
+            "claude-code",
+            "common-workflows",
+            "Claude Code Common Workflows",
+            "https://code.claude.com/docs/en/common-workflows",
+            "https://code.claude.com/docs/en/common-workflows.md",
+            "markdown",
+            "Anthropic",
+        ),
+        (
+            "claude-code/hooks-guide",
+            "claude-code",
+            "hooks-guide",
+            "Automate Actions with Claude Code Hooks",
+            "https://code.claude.com/docs/en/hooks-guide",
+            "https://code.claude.com/docs/en/hooks-guide.md",
+            "markdown",
+            "Anthropic",
+        ),
+        (
+            "claude-code/mcp",
+            "claude-code",
+            "mcp",
+            "Connect Claude Code to Tools via MCP",
+            "https://code.claude.com/docs/en/mcp",
+            "https://code.claude.com/docs/en/mcp.md",
+            "markdown",
+            "Anthropic",
+        ),
+        (
+            "claude-code/subagents",
+            "claude-code",
+            "subagents",
+            "Create Custom Claude Code Subagents",
+            "https://code.claude.com/docs/en/sub-agents",
+            "https://code.claude.com/docs/en/sub-agents.md",
+            "markdown",
+            "Anthropic",
+        ),
+        (
             "codex/cli",
             "codex",
             "cli",
@@ -127,10 +177,60 @@ _FROZEN_SOURCE_SET: Final[frozenset[RowSpec]] = frozenset(
             "markdown",
             "OpenAI",
         ),
+        (
+            "codex/best-practices",
+            "codex",
+            "best-practices",
+            "Codex Best Practices",
+            "https://developers.openai.com/codex/learn/best-practices",
+            "https://learn.chatgpt.com/guides/best-practices",
+            "html",
+            "OpenAI",
+        ),
+        (
+            "codex/ide",
+            "codex",
+            "ide",
+            "Codex IDE Extension",
+            "https://developers.openai.com/codex/ide",
+            "https://learn.chatgpt.com/docs/codex/ide",
+            "html",
+            "OpenAI",
+        ),
+        (
+            "codex/cloud",
+            "codex",
+            "cloud",
+            "Codex Cloud",
+            "https://developers.openai.com/codex/cloud",
+            "https://learn.chatgpt.com/docs/cloud",
+            "html",
+            "OpenAI",
+        ),
+        (
+            "codex/mcp",
+            "codex",
+            "mcp",
+            "Codex Model Context Protocol",
+            "https://developers.openai.com/codex/extend/mcp",
+            "https://learn.chatgpt.com/docs/extend/mcp.md",
+            "markdown",
+            "OpenAI",
+        ),
+        (
+            "codex/github-action",
+            "codex",
+            "github-action",
+            "Codex GitHub Action",
+            "https://developers.openai.com/codex/github-action",
+            "https://learn.chatgpt.com/docs/github-action.md",
+            "markdown",
+            "OpenAI",
+        ),
     )
 )
-_MANIFEST_SIZE: Final = 10
-_PRODUCT_ENTRY_SIZE: Final = 5
+_MANIFEST_SIZE: Final = 20
+_PRODUCT_ENTRY_SIZE: Final = 10
 
 
 class Source(BaseModel):
@@ -188,7 +288,7 @@ class SourceManifest(RootModel[tuple[Source, ...]]):
     def _validate_manifest(self) -> Self:
         sources = self.root
         if len(sources) != _MANIFEST_SIZE:
-            msg = "manifest must contain exactly 10 sources"
+            msg = "manifest must contain exactly 20 sources"
             raise ValueError(msg)
 
         ids = [source.id for source in sources]
@@ -206,7 +306,7 @@ class SourceManifest(RootModel[tuple[Source, ...]]):
             product_counts["claude-code"] != _PRODUCT_ENTRY_SIZE
             or product_counts["codex"] != _PRODUCT_ENTRY_SIZE
         ):
-            msg = "source manifest must have five entries per product"
+            msg = "source manifest must have ten entries per product"
             raise ValueError(msg)
 
         if frozenset(_identity_tuple(source) for source in sources) != _FROZEN_SOURCE_SET:
