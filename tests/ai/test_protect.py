@@ -55,7 +55,7 @@ def test_protect_markdown_matches_complete_golden_fixture() -> None:
     _source, expected, protected = _fixture()
     assert protected.text == expected  # noqa: S101
     assert tuple(span.placeholder for span in protected.spans) == tuple(  # noqa: S101
-        f"⟦LEWISDOCS_{index:04d}⟧" for index in range(15)
+        f"@@LEWISDOCS_{index:04d}@@" for index in range(15)
     )
     assert tuple(span.original for span in protected.spans) == (  # noqa: S101
         "`codex --help`",
@@ -80,7 +80,7 @@ def test_protects_fence_and_language_marker_as_one_span() -> None:
     """Protect a complete fenced block including its language marker."""
     _assert_protection(
         "before\n```python\nprint('x')\n```\nafter\n",
-        "before\n⟦LEWISDOCS_0000⟧after\n",
+        "before\n@@LEWISDOCS_0000@@after\n",
         ("```python\nprint('x')\n```\n",),
     )
 
@@ -89,7 +89,7 @@ def test_protects_inline_code_with_delimiters() -> None:
     """Protect inline code including its Markdown delimiters."""
     _assert_protection(
         "Use `codex --help` now.",
-        "Use ⟦LEWISDOCS_0000⟧ now.",
+        "Use @@LEWISDOCS_0000@@ now.",
         ("`codex --help`",),
     )
 
@@ -98,7 +98,7 @@ def test_protects_bare_url() -> None:
     """Protect a URL outside a Markdown link."""
     _assert_protection(
         "Visit https://example.test/reference",
-        "Visit ⟦LEWISDOCS_0000⟧",
+        "Visit @@LEWISDOCS_0000@@",
         ("https://example.test/reference",),
     )
 
@@ -107,7 +107,7 @@ def test_protects_only_markdown_link_target() -> None:
     """Keep link text translatable while protecting its target."""
     _assert_protection(
         "Read [the guide](./docs/guide.md)",
-        "Read [the guide](⟦LEWISDOCS_0000⟧)",
+        "Read [the guide](@@LEWISDOCS_0000@@)",
         ("./docs/guide.md",),
     )
 
@@ -116,7 +116,7 @@ def test_protects_command_and_option() -> None:
     """Protect the fixed sync command and a command-line option."""
     _assert_protection(
         "Run npm run ai:sync with --dry-run",
-        "Run ⟦LEWISDOCS_0000⟧ with ⟦LEWISDOCS_0001⟧",
+        "Run @@LEWISDOCS_0000@@ with @@LEWISDOCS_0001@@",
         ("npm run ai:sync", "--dry-run"),
     )
 
@@ -125,7 +125,7 @@ def test_protects_environment_variable() -> None:
     """Protect an uppercase environment variable identifier."""
     _assert_protection(
         "Set MOONSHOT_API_KEY",
-        "Set ⟦LEWISDOCS_0000⟧",
+        "Set @@LEWISDOCS_0000@@",
         ("MOONSHOT_API_KEY",),
     )
 
@@ -134,7 +134,7 @@ def test_protects_filename_and_path() -> None:
     """Protect a filename and a slash-containing path."""
     _assert_protection(
         "Read AGENTS.md from ./configs/prod.yaml",
-        "Read ⟦LEWISDOCS_0000⟧ from ⟦LEWISDOCS_0001⟧",
+        "Read @@LEWISDOCS_0000@@ from @@LEWISDOCS_0001@@",
         ("AGENTS.md", "./configs/prod.yaml"),
     )
 
@@ -144,8 +144,8 @@ def test_protects_product_api_and_config_identifiers() -> None:
     _assert_protection(
         "Use Claude Code, Codex CLI, Moonshot API, kimi-k3, and agent_config",
         (
-            "Use ⟦LEWISDOCS_0000⟧, ⟦LEWISDOCS_0001⟧, ⟦LEWISDOCS_0002⟧, "
-            "⟦LEWISDOCS_0003⟧, and ⟦LEWISDOCS_0004⟧"
+            "Use @@LEWISDOCS_0000@@, @@LEWISDOCS_0001@@, @@LEWISDOCS_0002@@, "
+            "@@LEWISDOCS_0003@@, and @@LEWISDOCS_0004@@"
         ),
         ("Claude Code", "Codex CLI", "Moonshot API", "kimi-k3", "agent_config"),
     )
@@ -155,7 +155,7 @@ def test_protects_active_translation_model_name() -> None:
     """Protect the exact model identifier used in accepted-page metadata."""
     _assert_protection(
         "Use k3",
-        "Use ⟦LEWISDOCS_0000⟧",
+        "Use @@LEWISDOCS_0000@@",
         ("k3",),
     )
 
@@ -208,7 +208,7 @@ def test_restore_rejects_token_mutations(mutation: str) -> None:
         translated = protected.text.replace(first, "TEMP", 1)
         translated = translated.replace(second, first, 1).replace("TEMP", second, 1)
     else:
-        translated = protected.text + "⟦LEWISDOCS_9999⟧"
+        translated = protected.text + "@@LEWISDOCS_9999@@"
     _assert_translation_failure(
         source,
         protected,
