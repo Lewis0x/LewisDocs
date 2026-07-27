@@ -5,7 +5,8 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, Final, Literal, NoReturn
+from time import sleep
+from typing import TYPE_CHECKING, ClassVar, Final, Literal, NoReturn, cast
 
 import httpx2
 from pydantic import (
@@ -27,8 +28,24 @@ if TYPE_CHECKING:
 # https://www.kimi.com/code/docs/#api-%E6%8E%A5%E5%85%A5
 _ENDPOINT: Final = "https://api.kimi.com/coding/v1/chat/completions"
 _SERVER_ERROR_MIN_STATUS: Final = 500
-_MAX_TRANSLATION_CHARS: Final = 10_000
+_RATE_LIMIT_STATUS: Final = 429
+_RATE_LIMIT_RETRY_DELAYS: Final = (5.0, 15.0, 45.0)
+_MAX_RETRY_AFTER_SECONDS: Final = 300.0
+_TRANSIENT_RATE_LIMIT_MARKERS: Final = (
+    b"engine is currently overloaded",
+    b"too many requests",
+)
+_MAX_TRANSLATION_CHARS: Final = 4_000
 _PROVIDER_PLACEHOLDER: Final = "@@LEWISDOCS_LITERAL@@"
+_PROVIDER_LINK_LABEL_PATTERN: Final = (
+    r"(?P<prefix>!?\[)(?P<label>[^\]\n]*)(?P<middle>\]\()"
+)
+_PROVIDER_LINK_TARGET_PATTERN: Final = (
+    r"(?P<target>@@LEWISDOCS_\d{4}@@)(?P<suffix>\))"
+)
+_PROVIDER_LINK_RE: Final = re.compile(
+    f"{_PROVIDER_LINK_LABEL_PATTERN}{_PROVIDER_LINK_TARGET_PATTERN}"
+)
 _STRUCTURE_PREFIX_PATTERN: Final = (
     r"(?m)^(?:#{1,6}[ \t]+|[ \t]*(?:[-+*]|\d+\.)[ \t]+|[ \t]*>+[ \t]*)"
 )
@@ -36,6 +53,7 @@ _TABLE_DELIMITER_PATTERN: Final = (
     r"^[ \t]*\|?[ \t]*:?-{3,}:?" + r"(?:[ \t]*\|[ \t]*:?-{3,}:?)+[ \t]*\|?[ \t]*$"
 )
 _STRUCTURE_RE: Final = re.compile(rf"{_STRUCTURE_PREFIX_PATTERN}|{_TABLE_DELIMITER_PATTERN}|\|")
+_SECTION_HEADING_RE: Final = re.compile(r"(?m)^#{1,6}[ \t]+")
 _TRANSLATION_TIMEOUT: Final = httpx2.Timeout(
     connect=10.0,
     read=900.0,
@@ -215,12 +233,7 @@ def _translate_chunk(
             KimiMessage(role="user", content=provider.text),
         ),
     )
-    response = client.post(
-        _ENDPOINT,
-        headers={"Authorization": auth},
-        json=payload.model_dump(mode="json"),
-        timeout=_TRANSLATION_TIMEOUT,
-    )
+    response = _post_with_rate_limit_retry(client, payload, auth)
     _ = response.raise_for_status()
     completion = KimiResponse.model_validate_json(response.content).choices[0].message.content
 
@@ -248,6 +261,47 @@ def _translate_chunk(
         )
 
 
+def _post_with_rate_limit_retry(
+    client: httpx2.Client,
+    payload: KimiRequest,
+    auth: str,
+) -> httpx2.Response:
+    for retry, fallback_delay in enumerate((*_RATE_LIMIT_RETRY_DELAYS, None)):
+        try:
+            return client.post(
+                _ENDPOINT,
+                headers={"Authorization": auth},
+                json=payload.model_dump(mode="json"),
+                timeout=_TRANSLATION_TIMEOUT,
+            )
+        except httpx2.HTTPStatusError as error:
+            if (
+                fallback_delay is None
+                or not _is_transient_rate_limit(error.response)
+                or retry >= len(_RATE_LIMIT_RETRY_DELAYS)
+            ):
+                raise
+            sleep(_retry_delay(error.response, fallback_delay))
+    raise AssertionError
+
+
+def _is_transient_rate_limit(response: httpx2.Response) -> bool:
+    content = response.content.lower()
+    return response.status_code == _RATE_LIMIT_STATUS and any(
+        marker in content for marker in _TRANSIENT_RATE_LIMIT_MARKERS
+    )
+
+
+def _retry_delay(response: httpx2.Response, fallback: float) -> float:
+    value = cast("str | None", response.headers.get("retry-after"))
+    if value is None:
+        return fallback
+    try:
+        return min(max(float(value), 0.0), _MAX_RETRY_AFTER_SECONDS)
+    except ValueError:
+        return fallback
+
+
 def _provider_payload(protected: ProtectedMarkdown) -> _ProviderPayload:
     candidates: list[tuple[int, int, str]] = []
     for span in protected.spans:
@@ -263,6 +317,11 @@ def _provider_payload(protected: ProtectedMarkdown) -> _ProviderPayload:
         (match.start(), match.end(), match.group(0))
         for match in _STRUCTURE_RE.finditer(protected.text)
     )
+    for match in _PROVIDER_LINK_RE.finditer(protected.text):
+        candidates.extend(
+            (*match.span(group), match.group(group))
+            for group in ("prefix", "middle", "suffix")
+        )
 
     parts: list[str] = []
     replacements: list[str] = []
@@ -332,11 +391,14 @@ def _split_text(
     cursor = 0
     while len(text) - cursor > max_chars:
         limit = cursor + max_chars
-        boundary = text.rfind("\n\n", cursor + 1, limit + 1)
+        minimum = cursor + (max_chars // 2)
+        boundary = _section_boundary(text, minimum, limit)
         if boundary < 0:
-            boundary = text.rfind("\n", cursor + 1, limit + 1)
+            boundary = text.rfind("\n\n", minimum, limit + 1)
         if boundary < 0:
-            boundary = text.rfind(" ", cursor + 1, limit + 1)
+            boundary = text.rfind("\n", minimum, limit + 1)
+        if boundary < 0:
+            boundary = text.rfind(" ", minimum, limit + 1)
         if boundary < 0:
             boundary = limit
         boundary = _placeholder_safe_boundary(cursor, boundary, placeholder_ranges)
@@ -353,6 +415,15 @@ def _split_text(
         cursor = max(boundary, separator_end)
     chunks.append((text[cursor:], ""))
     return tuple(chunk for chunk in chunks if chunk[0])
+
+
+def _section_boundary(text: str, minimum: int, limit: int) -> int:
+    boundary = -1
+    for match in _SECTION_HEADING_RE.finditer(text, minimum, limit + 1):
+        boundary = match.start()
+    while boundary > minimum and text[boundary - 1 : boundary] == "\n":
+        boundary -= 1
+    return boundary
 
 
 def _placeholder_safe_boundary(

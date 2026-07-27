@@ -18,14 +18,13 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = REPO_ROOT / "source-ai" / "sources.yaml"
 
 
-def _routes() -> tuple[str, ...]:
+def _routes(*, bilingual: bool = True) -> tuple[str, ...]:
     manifest = load_sources(MANIFEST_PATH)
-    source_routes = tuple(
-        f"/ai/{lang}/{source.product}/{source.slug}"
-        for source in manifest.root
-        for lang in ("en", "zh-CN")
-    )
-    return (*source_routes, "/ai/zh-CN/learn/claude-code", "/ai/zh-CN/learn/codex")
+    english = tuple(f"/ai/en/{source.product}/{source.slug}" for source in manifest.root)
+    if not bilingual:
+        return english
+    chinese = tuple(f"/ai/zh-CN/{source.product}/{source.slug}" for source in manifest.root)
+    return (*english, *chinese, "/ai/zh-CN/learn/claude-code", "/ai/zh-CN/learn/codex")
 
 
 def _install_dist(dist: Path, routes: tuple[str, ...], *, labels: bool = True) -> None:
@@ -37,7 +36,9 @@ def _install_dist(dist: Path, routes: tuple[str, ...], *, labels: bool = True) -
     stored_fields: dict[str, dict[str, str | list[str]]] = {
         str(index): {
             "title": (
-                ("EN · Synthetic" if "/en/" in route else "中文 · 合成") if labels else "Synthetic"
+                ("EN · Synthetic `CLI`" if "/en/" in route else "中文 · 合成")
+                if labels
+                else "Synthetic"
             ),
             "titles": [],
         }
@@ -56,18 +57,23 @@ def _install_dist(dist: Path, routes: tuple[str, ...], *, labels: bool = True) -
     )
     chunk = dist / "assets" / "chunks" / "@localSearchIndexroot.test.js"
     chunk.parent.mkdir(parents=True)
-    escaped_payload = payload.replace("\\", "\\\\")
+    escaped_payload = payload.replace("\\", "\\\\").replace("`", "\\`")
     _ = chunk.write_text(
         f"const t=`{escaped_payload}`;export{{t as default}};\n",
         encoding="utf-8",
     )
 
 
-def _options(tmp_path: Path) -> VerifyBuildOptions:
+def _options(tmp_path: Path, *, bilingual: bool = True) -> VerifyBuildOptions:
+    content_root = tmp_path / "content"
+    (content_root / "en").mkdir(parents=True)
+    if bilingual:
+        (content_root / "zh-CN").mkdir()
     return VerifyBuildOptions(
         repo_root=REPO_ROOT,
         dist_root=tmp_path / "dist",
         manifest_path=MANIFEST_PATH,
+        content_root=content_root,
     )
 
 
@@ -82,6 +88,17 @@ def test_verify_dist_accepts_exact_html_and_search_inventory(tmp_path: Path) -> 
 
     # Then
     assert len(tuple((options.dist_root / "ai").rglob("*.html"))) == 22
+
+
+def test_verify_dist_accepts_exact_english_preview_inventory(tmp_path: Path) -> None:
+    """Accept exactly ten English routes when translated content is not present."""
+    options = _options(tmp_path, bilingual=False)
+    routes = _routes(bilingual=False)
+    _install_dist(options.dist_root, routes)
+
+    verify_dist(options)
+
+    assert len(tuple((options.dist_root / "ai").rglob("*.html"))) == len(routes)
 
 
 @pytest.mark.parametrize("mutation", ["missing_html", "extra_html", "missing_search", "labels"])
