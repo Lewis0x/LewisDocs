@@ -1,0 +1,21 @@
+{
+  "search": [
+    {
+      "query": "synthetic permissions marker",
+      "route": "/ai/en/claude-code/permissions",
+      "label": "EN"
+    },
+    {
+      "query": "合成权限标记",
+      "route": "/ai/zh-CN/claude-code/permissions",
+      "label": "中文"
+    }
+  ],
+  "cad": {
+    "source_route": "/platforms/bricscad",
+    "selector": "a[href=\"/platforms/autocad#二、api-整体架构-六层金字塔\"]",
+    "text": "3.1 §二 API 整体架构：六层金字塔",
+    "target_route": "/platforms/autocad",
+    "target_anchor": "二、api-整体架构-六层金字塔"
+  }
+}

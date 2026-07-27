@@ -1,0 +1,1 @@
+"""AI handbook CLI package."""

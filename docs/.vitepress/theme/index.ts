@@ -1,11 +1,12 @@
-import { h } from 'vue'
-import DefaultTheme from 'vitepress/theme'
 import type { Theme } from 'vitepress'
+import DefaultTheme from 'vitepress/theme'
+import { h } from 'vue'
+import AiLanguageSwitch from './components/AiLanguageSwitch.vue'
 import Honeypot from './components/Honeypot.vue'
-import OutlineToggle from './components/OutlineToggle.vue'
-import OutlineResizer from './components/OutlineResizer.vue'
-import Term from './components/Term.vue'
 import Lightbox from './components/Lightbox.vue'
+import OutlineResizer from './components/OutlineResizer.vue'
+import OutlineToggle from './components/OutlineToggle.vue'
+import Term from './components/Term.vue'
 import './custom.css'
 
 const theme: Theme = {
@@ -16,6 +17,7 @@ const theme: Theme = {
   Layout() {
     return h(DefaultTheme.Layout, null, {
       'layout-top': () => [h(OutlineToggle), h(OutlineResizer)],
+      'doc-before': () => h(AiLanguageSwitch),
       'layout-bottom': () => [h(Honeypot), h(Lightbox)],
     })
   },

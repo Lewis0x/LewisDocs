@@ -22,6 +22,11 @@ import re
 import sys
 from pathlib import Path
 
+if __package__:
+    from scripts.ai.cad_paths import iter_cad_markdown
+else:
+    from ai.cad_paths import iter_cad_markdown
+
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / 'docs'
 
@@ -108,7 +113,7 @@ def main() -> int:
     total_refs = 0
     total_linked = 0
     total_skipped = 0
-    files = sorted(DOCS.rglob('*.md'))
+    files = iter_cad_markdown(DOCS)
     print(f'Scanning {len(files)} markdown files...')
     for fpath in files:
         n_refs, linked, skipped = process_file(fpath)

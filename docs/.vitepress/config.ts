@@ -1,4 +1,22 @@
 import { withMermaid } from 'vitepress-plugin-mermaid'
+import { createSearchRenderer } from './search-render.mjs'
+
+const INCLUDE_AI_HANDBOOK = process.env.INCLUDE_AI_HANDBOOK === '1'
+
+const AI_SOURCES = [
+  { product: 'claude-code', slug: 'quickstart', title: 'Claude Code Quickstart' },
+  { product: 'claude-code', slug: 'memory', title: 'Claude Code Memory' },
+  { product: 'claude-code', slug: 'permissions', title: 'Claude Code Permissions' },
+  { product: 'claude-code', slug: 'extensions', title: 'Claude Code Features Overview' },
+  { product: 'claude-code', slug: 'best-practices', title: 'Claude Code Best Practices' },
+  { product: 'codex', slug: 'cli', title: 'Codex CLI' },
+  { product: 'codex', slug: 'prompting', title: 'Codex Prompting' },
+  { product: 'codex', slug: 'agents-md', title: 'Codex AGENTS.md' },
+  { product: 'codex', slug: 'approvals-security', title: 'Codex Agent Approvals and Security' },
+  { product: 'codex', slug: 'customization', title: 'Codex Customization Overview' },
+] as const
+
+const renderAiSearch = createSearchRenderer(INCLUDE_AI_HANDBOOK)
 
 // 中文分词器：使用浏览器原生 Intl.Segmenter
 // 支持的浏览器：Chrome 87+, Firefox 125+, Safari 14.1+, Edge 87+
@@ -6,8 +24,8 @@ const chineseTokenize = (text: string) => {
   if (typeof text !== 'string') return [text]
   const lower = text.toLowerCase()
 
-  if (typeof Intl !== 'undefined' && (Intl as any).Segmenter) {
-    const segmenter = new (Intl as any).Segmenter('zh-CN', { granularity: 'word' })
+  if (typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function') {
+    const segmenter = new Intl.Segmenter('zh-CN', { granularity: 'word' })
     const tokens: string[] = []
     for (const seg of segmenter.segment(lower)) {
       const t = seg.segment.trim()
@@ -61,10 +79,19 @@ export default withMermaid({
 
   // 删除 VitePress 默认注入的 generator 指纹（把版本号送出去太傻）
   transformHead({ assets, head }) {
-    return head.filter(
-      ([tag, attrs]) =>
-        !(tag === 'meta' && (attrs as any)?.name === 'generator' && (attrs as any)?.content?.startsWith('VitePress')),
-    )
+    return head.filter(([tag, attrs]) => {
+      if (tag !== 'meta' || attrs === null || typeof attrs !== 'object') {
+        return true
+      }
+
+      return !(
+        'name' in attrs &&
+        attrs.name === 'generator' &&
+        'content' in attrs &&
+        typeof attrs.content === 'string' &&
+        attrs.content.startsWith('VitePress')
+      )
+    })
   },
 
   themeConfig: {
@@ -88,6 +115,9 @@ export default withMermaid({
         ],
       },
       { text: '术语表', link: '/glossary' },
+      ...(INCLUDE_AI_HANDBOOK
+        ? [{ text: 'AI 双语手册', link: '/ai/zh-CN/learn/claude-code' }]
+        : []),
     ],
 
     sidebar: [
@@ -126,6 +156,28 @@ export default withMermaid({
           { text: '术语表（Glossary）', link: '/glossary' },
         ],
       },
+      ...(INCLUDE_AI_HANDBOOK
+        ? [
+            {
+              text: 'AI 双语手册',
+              collapsed: false,
+              items: [
+                { text: 'Claude Code 学习路径', link: '/ai/zh-CN/learn/claude-code' },
+                { text: 'Codex 学习路径', link: '/ai/zh-CN/learn/codex' },
+                ...AI_SOURCES.flatMap((source) => [
+                  {
+                    text: `EN · ${source.title}`,
+                    link: `/ai/en/${source.product}/${source.slug}`,
+                  },
+                  {
+                    text: `中文 · ${source.title}`,
+                    link: `/ai/zh-CN/${source.product}/${source.slug}`,
+                  },
+                ]),
+              ],
+            },
+          ]
+        : []),
     ],
 
     outline: {
@@ -178,6 +230,7 @@ export default withMermaid({
             boost: { title: 4, text: 2, titles: 1 },
           },
         },
+        _render: renderAiSearch,
       },
     },
   },
@@ -195,10 +248,10 @@ export default withMermaid({
       //     因为自己创建滚动容器而把 sticky 锚到 table 内部，与"页面下滚时表头吸顶"的 UX 相悖）
       const defaultOpen =
         md.renderer.rules.table_open ||
-        ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options, env))
+        ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options))
       const defaultClose =
         md.renderer.rules.table_close ||
-        ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options, env))
+        ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options))
       md.renderer.rules.table_open = (tokens, idx, options, env, self) =>
         '<div class="table-scroll-wrapper">' +
         defaultOpen(tokens, idx, options, env, self)

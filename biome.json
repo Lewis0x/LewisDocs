@@ -1,0 +1,28 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.5/schema.json",
+  "files": {
+    "includes": [
+      "docs/.vitepress/config.ts",
+      "docs/.vitepress/search-render.mjs",
+      "docs/.vitepress/theme/index.ts",
+      "docs/.vitepress/theme/components/AiLanguageSwitch.vue",
+      "tests/ai/node/search-render.test.mjs"
+    ]
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": false,
+      "style": {
+        "noNonNullAssertion": "error"
+      },
+      "suspicious": {
+        "noExplicitAny": "error",
+        "noTsIgnore": "error"
+      }
+    }
+  },
+  "formatter": {
+    "enabled": false
+  }
+}
