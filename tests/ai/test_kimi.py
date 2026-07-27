@@ -43,7 +43,7 @@ EXPECTED_TRANSLATION_READ_TIMEOUT: Final = 900.0
 EXPECTED_MAX_TRANSLATION_CHARS: Final = 10_000
 EXPECTED_TRANSLATION_CHUNKS: Final = 3
 RETRY_FAILURE_THRESHOLD: Final = 4_000
-EXPECTED_RETRY_TOKENS: Final = 2
+PROVIDER_PLACEHOLDER: Final = "@@LEWISDOCS_LITERAL@@"
 
 BAD_RESPONSES: Final[tuple[bytes, ...]] = (
     b"not json",
@@ -71,6 +71,14 @@ def _translation_input(api_key: SecretStr) -> TranslationInput:
         markdown=MARKDOWN,
         api_key=api_key,
     )
+
+
+def _provider_markdown(markdown: str) -> str:
+    protected = protect_markdown(markdown)
+    text = protected.text
+    for span in protected.spans:
+        text = text.replace(span.placeholder, PROVIDER_PLACEHOLDER, 1)
+    return text
 
 
 def _call(transport: httpx2.BaseTransport, api_key: SecretStr) -> str:
@@ -164,8 +172,7 @@ def test_translate_posts_exact_wire_and_restores_protected_literals(
     """Send only the fixed payload and return validated translated Markdown."""
     sentinel = secrets.token_urlsafe(48)
     api_key = SecretStr(sentinel)
-    protected = protect_markdown(MARKDOWN)
-    translated = protected.text.replace("Synthetic handbook", "合成手册")
+    translated = _provider_markdown(MARKDOWN).replace("Synthetic handbook", "合成手册")
     observations: list[ObservedRequest] = []
 
     def handler(request: httpx2.Request) -> httpx2.Response:
@@ -203,9 +210,9 @@ def test_translate_posts_exact_wire_and_restores_protected_literals(
     assert observed.payload.reasoning_effort == "low"  # noqa: S101
     assert observed.payload.messages[0].role == "system"  # noqa: S101
     assert "逐行翻译" in observed.payload.messages[0].content  # noqa: S101
-    assert "不得移动任何 @@LEWISDOCS_0000@@ 令牌" in observed.payload.messages[0].content  # noqa: S101
+    assert "不得增删或移动任何 @@LEWISDOCS_LITERAL@@ 令牌" in observed.payload.messages[0].content  # noqa: S101
     assert observed.payload.messages[1].role == "user"  # noqa: S101
-    assert observed.payload.messages[1].content == protected.text  # noqa: S101
+    assert observed.payload.messages[1].content == _provider_markdown(MARKDOWN)  # noqa: S101
     assert all(  # noqa: S101
         field not in observed.raw_body
         for field in (
@@ -254,7 +261,6 @@ def test_translate_retries_failed_chunk_at_smaller_boundaries() -> None:
     paragraph_a = ("Translate the first sentence exactly. " * 90) + "`literal_a`."
     paragraph_b = ("Translate the second sentence exactly. " * 90) + "`literal_b`."
     markdown = f"# Retry handbook\n\n{paragraph_a}\n\n{paragraph_b}"
-    expected_tokens = tuple(span.placeholder for span in protect_markdown(markdown).spans)
     observed_chunks: list[str] = []
 
     def handler(request: httpx2.Request) -> httpx2.Response:
@@ -264,13 +270,7 @@ def test_translate_retries_failed_chunk_at_smaller_boundaries() -> None:
         if len(chunk) <= RETRY_FAILURE_THRESHOLD:
             return _json_response(request, chunk)
 
-        assert len(expected_tokens) == EXPECTED_RETRY_TOKENS  # noqa: S101
-        swapped = chunk.replace(expected_tokens[0], "@@SWAP@@", 1)
-        swapped = swapped.replace(expected_tokens[1], expected_tokens[0], 1)
-        return _json_response(
-            request,
-            swapped.replace("@@SWAP@@", expected_tokens[1], 1),
-        )
+        return _json_response(request, chunk.replace(PROVIDER_PLACEHOLDER, "", 1))
 
     api_key = SecretStr(secrets.token_urlsafe(48))
     with httpx2.Client(transport=httpx2.MockTransport(handler)) as client:
@@ -289,13 +289,12 @@ def test_translate_retries_failed_chunk_at_smaller_boundaries() -> None:
 def test_translate_retry_never_splits_a_protected_placeholder() -> None:
     """Keep each protected placeholder atomic across recursive hard splits."""
     markdown = ("a" * 3_500) + "`literal_at_boundary`" + ("b" * 3_500)
-    expected_token = protect_markdown(markdown).spans[0].placeholder
 
     def handler(request: httpx2.Request) -> httpx2.Response:
         payload = KimiRequest.model_validate_json(request.content)
         chunk = payload.messages[1].content
         if len(chunk) > RETRY_FAILURE_THRESHOLD:
-            return _json_response(request, chunk.replace(expected_token, "", 1))
+            return _json_response(request, chunk.replace(PROVIDER_PLACEHOLDER, "", 1))
         return _json_response(request, chunk)
 
     api_key = SecretStr(secrets.token_urlsafe(48))
@@ -308,25 +307,15 @@ def test_translate_retry_never_splits_a_protected_placeholder() -> None:
     assert result == markdown  # noqa: S101
 
 
-def test_translate_keeps_splitting_short_failed_chunks_with_multiple_tokens() -> None:
-    """Split below the character floor until reordered tokens are isolated."""
+def test_translate_uses_one_stable_provider_placeholder_for_all_literals() -> None:
+    """Use repeated provider markers while restoring unique literals in order."""
     markdown = "# Short retry\n\nFirst `literal_a`, then `literal_b`."
-    expected_tokens = tuple(span.placeholder for span in protect_markdown(markdown).spans)
     observed_chunks: list[str] = []
-    successful_chunks: list[str] = []
 
     def handler(request: httpx2.Request) -> httpx2.Response:
         payload = KimiRequest.model_validate_json(request.content)
         chunk = payload.messages[1].content
         observed_chunks.append(chunk)
-        if all(token in chunk for token in expected_tokens):
-            swapped = chunk.replace(expected_tokens[0], "@@SWAP@@", 1)
-            swapped = swapped.replace(expected_tokens[1], expected_tokens[0], 1)
-            return _json_response(
-                request,
-                swapped.replace("@@SWAP@@", expected_tokens[1], 1),
-            )
-        successful_chunks.append(chunk)
         return _json_response(request, chunk)
 
     api_key = SecretStr(secrets.token_urlsafe(48))
@@ -337,10 +326,9 @@ def test_translate_keeps_splitting_short_failed_chunks_with_multiple_tokens() ->
         )
 
     assert result == markdown  # noqa: S101
-    assert len(observed_chunks) > 1  # noqa: S101
-    assert all(  # noqa: S101
-        sum(token in chunk for token in expected_tokens) <= 1 for chunk in successful_chunks
-    )
+    assert observed_chunks == [  # noqa: S101
+        f"# Short retry\n\nFirst {PROVIDER_PLACEHOLDER}, then {PROVIDER_PLACEHOLDER}."
+    ]
 
 
 def test_translate_keeps_splitting_short_structure_failures() -> None:
@@ -458,7 +446,6 @@ def test_runtime_secret_is_absent_from_output_files_and_diff(
     sentinel = secrets.token_urlsafe(48)
     api_key = SecretStr(sentinel)
     checks: list[bool] = []
-    protected = protect_markdown(MARKDOWN)
 
     def handler(request: httpx2.Request) -> httpx2.Response:
         checks.append(
@@ -473,7 +460,7 @@ def test_runtime_secret_is_absent_from_output_files_and_diff(
                 request=request,
                 content=b"denied",
             )
-        return _json_response(request, protected.text)
+        return _json_response(request, _provider_markdown(MARKDOWN))
 
     _ = _call(httpx2.MockTransport(handler), api_key)
     _ = (tmp_path / "evidence.txt").write_text("safe", encoding="utf-8")
