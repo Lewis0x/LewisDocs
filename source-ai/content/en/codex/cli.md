@@ -5,7 +5,7 @@ product: codex
 lang: en
 canonical_url: https://learn.chatgpt.com/docs/codex/cli
 owner: OpenAI
-content_sha256: 5e23750a4f8787e509627f1b11d16da1a4bf5a89d0938df98855f61081a2071d
+content_sha256: 9895e4936d78754402c57247657cd2c46752bde97d694b9c6c95ff7c15429d58
 ---
 [Official source](https://learn.chatgpt.com/docs/codex/cli)
 
@@ -72,7 +72,7 @@ Use Codex interactively or call codex exec from repeatable workflows and pipelin
 
 Quickstart
 
-##  Get started with Codex CLI 
+## Get started with Codex CLI
 
  Install Codex, sign in, and run your first task from a project directory. 
 
@@ -134,8 +134,6 @@ Learn more
 
 Select a review preset›1.Review against a base branch(PR Style)2.Review uncommitted changes3.Review a commit4.Custom review instructions
 
-## 
-
 Build a terminal workflow around Codex
 
 
@@ -160,8 +158,6 @@ Learn about the CLI features you can use to resume sessions, add visual
  07 ` /permissions ` Set the boundaries for each run  Choose when Codex can edit files or run commands without asking, and inspect the active sandbox and writable roots before you continue. 
 
  08 ` codex completion ` Fit Codex to your terminal  Generate completions for your shell, choose a syntax theme, and open longer prompts in the editor configured by VISUAL or EDITOR. 
-
-## 
 
 Use Codex CLI when…
 
