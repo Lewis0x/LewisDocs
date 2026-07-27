@@ -73,6 +73,7 @@ _ERROR_PRESENTATION: Final = {
     ErrorCode.VALIDATION_FAILED: (6, "validation failed"),
     ErrorCode.WRITE_FAILED: (7, "write failed"),
 }
+_RESUME_ENV: Final = "AI_SYNC_RESUME"
 
 
 def run_sync(options: SyncOptions, deps: SyncDeps) -> SyncReport:
@@ -96,9 +97,18 @@ def run_sync(options: SyncOptions, deps: SyncDeps) -> SyncReport:
                 message="translation key required",
                 source_id=first_changed.source_id,
             )
-        scratch = options.staging_root / f"sync-{uuid.uuid4().hex}"
+        resume = os.environ.get(_RESUME_ENV) == "1"
+        scratch = options.staging_root / ("resume" if resume else f"sync-{uuid.uuid4().hex}")
         try:
-            candidate = _candidate(scratch, normalized, existing, key, client, deps)
+            candidate = _candidate(
+                scratch,
+                normalized,
+                existing,
+                key,
+                client,
+                deps,
+                resume=resume,
+            )
             validate_candidate(
                 managed_root=candidate,
                 learning_root=content_root / "learn",
@@ -108,8 +118,8 @@ def run_sync(options: SyncOptions, deps: SyncDeps) -> SyncReport:
                 AcceptanceRequest(options=options, candidate=candidate, report=report),
                 deps.file_ops,
             )
-        except AIAgentError:
-            if scratch.exists():
+        except AIAgentError as error:
+            if scratch.exists() and not (resume and error.code == ErrorCode.TRANSLATION_FAILED):
                 deps.file_ops.remove(scratch, fault=None)
             raise
     return report
@@ -156,14 +166,23 @@ def _candidate(  # noqa: PLR0913, PLR0917
     key: str,
     client: httpx2.Client,
     deps: SyncDeps,
+    *,
+    resume: bool,
 ) -> Path:
     seed, candidate = scratch / "seed", scratch / "candidate"
+    if candidate.exists():
+        deps.file_ops.remove(candidate, fault=None)
     for page in pages:
         changed = (
             page.source.id not in existing or existing[page.source.id][2] != page.content_sha256
         )
         english = render_english_page(page) if changed else existing[page.source.id][0]
-        chinese = _chinese(page, changed, existing, key, client, deps.translator)
+        cached = _cached_chinese(seed, page, english) if resume and changed else None
+        chinese = (
+            cached
+            if cached is not None
+            else _chinese(page, changed, existing, key, client, deps.translator)
+        )
         deps.file_ops.write_bytes(
             seed / "en" / page.source.product / f"{page.source.slug}.md",
             english,
@@ -177,6 +196,31 @@ def _candidate(  # noqa: PLR0913, PLR0917
     deps.file_ops.copy_tree(seed / "en", candidate / "en", fault="candidate:en")
     deps.file_ops.copy_tree(seed / "zh-CN", candidate / "zh-CN", fault="candidate:zh-CN")
     return candidate
+
+
+def _cached_chinese(
+    seed: Path,
+    page: NormalizedPage,
+    english: bytes,
+) -> bytes | None:
+    english_path = seed / "en" / page.source.product / f"{page.source.slug}.md"
+    chinese_path = seed / "zh-CN" / page.source.product / f"{page.source.slug}.md"
+    try:
+        if english_path.read_bytes() != english:
+            return None
+        chinese = chinese_path.read_bytes()
+        accepted = parse_accepted_page(chinese_path)
+    except (AIAgentError, OSError):
+        return None
+    if (
+        accepted.source_id != page.source.id
+        or accepted.product != page.source.product
+        or accepted.lang != "zh-CN"
+        or accepted.content_sha256 != page.content_sha256
+        or accepted.translation_of != page.source.id
+    ):
+        return None
+    return chinese
 
 
 def _chinese(  # noqa: PLR0913, PLR0917

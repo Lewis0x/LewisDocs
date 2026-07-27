@@ -643,6 +643,72 @@ def test_fetch_and_translation_failures_preserve_the_accepted_snapshot(
     assert tree_snapshot(content) == before
 
 
+def test_local_resume_reuses_completed_translations_after_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manifest_path = ROOT / "source-ai" / "sources.yaml"
+    manifest = load_sources(manifest_path)
+    content = tmp_path / "private"
+    install_learning(content, normalized_pages(manifest))
+    staging = tmp_path / "stage"
+    options = SyncOptions(
+        repo_root=ROOT,
+        content_root=content,
+        staging_root=staging,
+        manifest_path=manifest_path,
+        report_path=tmp_path / "report.json",
+    )
+    first_calls: list[SourceId] = []
+
+    def fail_on_second(client: httpx2.Client, request: TranslationInput) -> str:
+        del client
+        first_calls.append(request.source_id)
+        if request.source_id == manifest.root[1].id:
+            raise AIAgentError(
+                code=ErrorCode.TRANSLATION_FAILED,
+                message="synthetic translation failure",
+                source_id=request.source_id,
+            )
+        return f"# 中文 {request.source_id}\n\n已更新。\n"
+
+    monkeypatch.setenv("MOONSHOT_API_KEY", "process-only-test-key")
+    monkeypatch.setenv("AI_SYNC_RESUME", "1")
+    with pytest.raises(AIAgentError):
+        _ = run_sync(
+            options,
+            SyncDeps(
+                client_factory=lambda: create_http_client(transport_for(manifest)),
+                translator=fail_on_second,
+                file_ops=RealFileOps(),
+            ),
+        )
+
+    assert first_calls == [manifest.root[0].id, manifest.root[1].id]
+    assert not (content / "en").exists()
+    assert not (content / "zh-CN").exists()
+    resumed_calls: list[SourceId] = []
+
+    def resume_translate(client: httpx2.Client, request: TranslationInput) -> str:
+        del client
+        resumed_calls.append(request.source_id)
+        return f"# 中文 {request.source_id}\n\n已更新。\n"
+
+    result = run_sync(
+        options,
+        SyncDeps(
+            client_factory=lambda: create_http_client(transport_for(manifest)),
+            translator=resume_translate,
+            file_ops=RealFileOps(),
+        ),
+    )
+
+    assert result.result == "updated"
+    assert manifest.root[0].id not in resumed_calls
+    assert resumed_calls == [source.id for source in manifest.root[1:]]
+    assert not (staging / "resume").exists()
+
+
 @pytest.mark.parametrize("fault", FAULTS)
 def test_run_sync_restores_content_report_and_learning_tree_for_each_write_fault(
     fault: str,
