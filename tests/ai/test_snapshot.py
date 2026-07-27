@@ -48,6 +48,14 @@ class _FaultOperation:
     destination: Path
 
 
+def _symlink_or_skip(link: Path, target: Path) -> None:
+    """Create a symlink, or skip when the current platform denies it."""
+    try:
+        link.symlink_to(target)
+    except (NotImplementedError, OSError) as exc:
+        pytest.skip(f"symlink unavailable: {exc}")
+
+
 class _FakeFileOps:
     _fail_once_at: str
     _has_failed: bool
@@ -148,8 +156,10 @@ def test_tree_snapshot_rejects_non_regular_entries_without_content_leakage(
 
     match entry_kind:
         case "symlink":
-            unsafe.symlink_to(target)
+            _symlink_or_skip(unsafe, target)
         case "fifo":
+            if not hasattr(os, "mkfifo"):
+                pytest.skip("fifo unavailable on this platform")
             os.mkfifo(unsafe)
         case unreachable:
             pytest.fail(f"unexpected entry kind {unreachable}")
@@ -306,7 +316,7 @@ def test_real_file_ops_removes_exact_files_trees_and_links(tmp_path: Path) -> No
     _ = file_path.write_bytes(b"file")
     _ = (tree_path / "nested").mkdir(parents=True)
     _ = (tree_path / "nested" / "file").write_bytes(b"tree")
-    link_path.symlink_to(file_path)
+    _symlink_or_skip(link_path, file_path)
     operations = RealFileOps()
 
     operations.remove(file_path, fault=None)

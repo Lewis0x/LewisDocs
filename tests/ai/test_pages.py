@@ -76,6 +76,14 @@ def _expect_invalid(managed_root: Path, learning_root: Path) -> None:
     assert exc_info.value.code == ErrorCode.VALIDATION_FAILED  # noqa: S101
 
 
+def _symlink_or_skip(link: Path, target: Path) -> None:
+    """Create a symlink, or skip when the current platform denies it."""
+    try:
+        link.symlink_to(target)
+    except (NotImplementedError, OSError) as exc:
+        pytest.skip(f"symlink unavailable: {exc}")
+
+
 def _complete_roots(tmp_path: Path) -> tuple[Path, Path]:
     """Create a valid managed candidate and separate live learning root."""
     managed_root = tmp_path / "candidate"
@@ -236,11 +244,11 @@ def test_validate_candidate_rejects_managed_pair_and_tree_violations(
             _ = duplicate.write_bytes(target.read_bytes())
         case "managed_symlink":
             _ = target.unlink()
-            _ = target.symlink_to(managed_root / "zh-CN" / source.product / f"{source.slug}.md")
+            _symlink_or_skip(target, managed_root / "zh-CN" / source.product / f"{source.slug}.md")
         case "learning_symlink":
             learning = learning_root / "zh-CN" / "claude-code.md"
             learning.unlink()
-            _ = learning.symlink_to(learning_root / "zh-CN" / "codex.md")
+            _symlink_or_skip(learning, learning_root / "zh-CN" / "codex.md")
         case "managed_decoy_learn":
             (managed_root / "learn").mkdir()
         case unreachable:
@@ -272,7 +280,7 @@ def test_validate_candidate_accepts_live_root_learning_only_when_it_is_its_own_l
 
     target = live_root / "en" / "claude-code" / "quickstart.md"
     target.unlink()
-    target.symlink_to(live_root / "zh-CN" / "claude-code" / "quickstart.md")
+    _symlink_or_skip(target, live_root / "zh-CN" / "claude-code" / "quickstart.md")
     _expect_invalid(live_root, live_root / "learn")
 
 

@@ -18,9 +18,27 @@ const requirementsPath = resolve(repositoryRoot, "requirements-uv-bootstrap.lock
 const platformUvStdout = process.platform === "win32" ? "\r\n" : "\n"
 const uvMetadataArgs = 'from importlib.metadata import version; print(version("uv"))'
 const uvMetadataStdout = `0.11.32${platformUvStdout}`
+const probeCommand = process.platform === "win32" ? "py" : "python3"
+const probePrefix = process.platform === "win32" ? ["-3"] : []
+const pythonDirectory = process.platform === "win32" ? "Scripts" : "bin"
+const pythonExecutable = process.platform === "win32" ? "python.exe" : "python"
 
 function probe(interpreter) {
   return { status: 0, stdout: JSON.stringify({ executable: interpreter, version: [3, 11, 0] }) }
+}
+
+function isPlatformProbe(command, args, script) {
+  return (
+    command === probeCommand &&
+    args.length === probePrefix.length + 2 &&
+    probePrefix.every((value, index) => args[index] === value) &&
+    args[probePrefix.length] === "-c" &&
+    args[probePrefix.length + 1] === script
+  )
+}
+
+function platformProbeArgs(script) {
+  return [...probePrefix, "-c", script]
 }
 
 function fakeBootstrapPython(path) {
@@ -74,7 +92,7 @@ test("selectInterpreter prefers win32 and picks first absolute >=3.11", () => {
 test("ensureBootstrap reuses only matching uv bootstrap and rejects mismatched uv version", () => {
   const root = mkdtempSync(join(tmpdir(), "task1-bootstrap-"))
   const bootstrapPath = resolve(root, ".ai-local", "uv-bootstrap")
-  const bootstrapPython = resolve(bootstrapPath, process.platform === "win32" ? "Scripts" : "bin", "python")
+  const bootstrapPython = resolve(bootstrapPath, pythonDirectory, pythonExecutable)
   fakeBootstrapPython(bootstrapPython)
 
   const healthy = ensureBootstrap({
@@ -133,11 +151,11 @@ test("ensureBootstrap creates same-root temporary bootstrap, runs hash-locked pi
         args[1] === "venv"
       ) {
         tempPath = args[2]
-        fakeBootstrapPython(resolve(tempPath, process.platform === "win32" ? "Scripts" : "bin", "python"))
+        fakeBootstrapPython(resolve(tempPath, pythonDirectory, pythonExecutable))
         return { status: 0 }
       }
 
-      const tempPython = resolve(tempPath, process.platform === "win32" ? "Scripts" : "bin", "python")
+      const tempPython = resolve(tempPath, pythonDirectory, pythonExecutable)
       if (command === tempPython) {
         if (args[0] === "-m" && args[1] === "pip" && args[2] === "--version") {
           return { status: 0, stdout: "pip 24.0.0" }
@@ -191,10 +209,10 @@ test("ensureBootstrap creates same-root temporary bootstrap, runs hash-locked pi
   )
   assert.equal(installCall?.[1][6], "-r")
   assert.equal(installCall?.[1][7], requirementsPath)
-  assert.equal(installCall?.[0], resolve(tempPath, process.platform === "win32" ? "Scripts" : "bin", "python"))
+  assert.equal(installCall?.[0], resolve(tempPath, pythonDirectory, pythonExecutable))
 
   const uvCheckCall = calls.find((entry) => entry[1][0] === "-c" && entry[1][1] === 'from importlib.metadata import version; print(version("uv"))')
-  assert.equal(uvCheckCall?.[0], resolve(tempPath, process.platform === "win32" ? "Scripts" : "bin", "python"))
+  assert.equal(uvCheckCall?.[0], resolve(tempPath, pythonDirectory, pythonExecutable))
   assert.equal(existsSync(tempPath), false)
   rmSync(root, { recursive: true, force: true })
 })
@@ -222,11 +240,11 @@ test("ensureBootstrap rejects non-exact uv output for fresh bootstrap creation",
           args[1] === "venv"
         ) {
           tempPath = args[2]
-          fakeBootstrapPython(resolve(tempPath, process.platform === "win32" ? "Scripts" : "bin", "python"))
+          fakeBootstrapPython(resolve(tempPath, pythonDirectory, pythonExecutable))
           return { status: 0 }
         }
 
-        const temporaryPython = tempPath === undefined ? undefined : resolve(tempPath, process.platform === "win32" ? "Scripts" : "bin", "python")
+        const temporaryPython = tempPath === undefined ? undefined : resolve(tempPath, pythonDirectory, pythonExecutable)
         if (command === temporaryPython) {
           if (args[0] === "-m" && args[1] === "pip" && args[2] === "--version") {
             return { status: 0, stdout: "pip 24.0.0" }
@@ -263,7 +281,7 @@ test("ensureBootstrap rejects non-exact uv output for fresh bootstrap creation",
 test("runLauncher enforces --ai --, passes exact uv args, cwd, shell, and env", () => {
   const root = mkdtempSync(join(tmpdir(), "task1-launcher-"))
   const bootstrapPath = resolve(root, ".ai-local", "uv-bootstrap")
-  const bootstrapPython = resolve(bootstrapPath, process.platform === "win32" ? "Scripts" : "bin", "python")
+  const bootstrapPython = resolve(bootstrapPath, pythonDirectory, pythonExecutable)
   const legacy = runLauncher(["--", "-m", "scripts.ai.cli", "sync"], {
     repositoryRoot: root,
     spawn: () => ({ status: 0 }),
@@ -288,7 +306,7 @@ test("runLauncher resolves one absolute interpreter through real probe->bootstra
   const probeScript =
     "import json,sys;print(json.dumps({'executable':sys.executable,'version':list(sys.version_info[:3])}))"
   const bootstrapPath = resolve(root, ".ai-local", "uv-bootstrap")
-  const bootstrapPython = resolve(bootstrapPath, process.platform === "win32" ? "Scripts" : "bin", "python")
+  const bootstrapPython = resolve(bootstrapPath, pythonDirectory, pythonExecutable)
   const interpreter = "/absolute/python3"
   const calls = []
   const uvProbeVersions = []
@@ -301,16 +319,16 @@ test("runLauncher resolves one absolute interpreter through real probe->bootstra
 
   const spawn = (command, args, options) => {
     calls.push([command, args, options])
-    if ((command === "python3" || command === "py") && args[0] === "-c" && args[1] === probeScript) {
+    if (isPlatformProbe(command, args, probeScript)) {
       return probe(interpreter)
     }
     if (command === interpreter && args[0] === "-m" && args[1] === "venv") {
       tempPath = args[2]
-      fakeBootstrapPython(resolve(tempPath, process.platform === "win32" ? "Scripts" : "bin", "python"))
+      fakeBootstrapPython(resolve(tempPath, pythonDirectory, pythonExecutable))
       return { status: 0 }
     }
 
-    const temporaryPython = tempPath === undefined ? undefined : resolve(tempPath, process.platform === "win32" ? "Scripts" : "bin", "python")
+    const temporaryPython = tempPath === undefined ? undefined : resolve(tempPath, pythonDirectory, pythonExecutable)
     if (command === temporaryPython) {
       if (args[0] === "-m" && args[1] === "pip" && args[2] === "--version") {
         return { status: 0, stdout: "pip 24.0.0" }
@@ -378,13 +396,11 @@ test("runLauncher resolves one absolute interpreter through real probe->bootstra
   assert.equal(firstMessage, "")
   assert.equal(secondMessage, "")
 
-  const probeCall = calls.find(
-    (entry) => (entry[0] === "python3" || entry[0] === "py") && entry[1][0] === "-c",
-  )
-  assert.equal(probeCall?.[0], "python3")
+  const probeCall = calls.find((entry) => isPlatformProbe(entry[0], entry[1], probeScript))
+  assert.equal(probeCall?.[0], probeCommand)
   assert.equal(probeCall?.[2]?.cwd, root)
   assert.equal(probeCall?.[2]?.shell, false)
-  assert.deepEqual(probeCall?.[1], ["-c", probeScript])
+  assert.deepEqual(probeCall?.[1], platformProbeArgs(probeScript))
 
   assert.notEqual(tempPath, undefined)
   const tempPattern = /uv-bootstrap\.tmp-[0-9]+-[a-f0-9]+$/
@@ -409,7 +425,7 @@ test("runLauncher resolves one absolute interpreter through real probe->bootstra
     "-r",
     resolve(root, "requirements-uv-bootstrap.lock"),
   ])
-  assert.equal(installCall?.[0], resolve(tempPath, process.platform === "win32" ? "Scripts" : "bin", "python"))
+  assert.equal(installCall?.[0], resolve(tempPath, pythonDirectory, pythonExecutable))
 
   assert.equal(uvProbeVersions.length, 2)
   assert.deepEqual(uvProbeVersions[0], "0.11.32")
@@ -445,6 +461,8 @@ test("runLauncher resolves one absolute interpreter through real probe->bootstra
 test("runLauncher emits stable errors from real ensureBootstrap failure branches", () => {
   const root = mkdtempSync(join(tmpdir(), "task1-launcher-errors-"))
   const binDir = process.platform === "win32" ? "Scripts" : "bin"
+  const probeScript =
+    "import json,sys;print(json.dumps({'executable':sys.executable,'version':list(sys.version_info[:3])}))"
   const runWithError = (repositoryRoot, spawn) => {
     const messages = []
     const status = runLauncher(["--ai", "--", "-m", "scripts.ai.cli", "sync"], {
@@ -461,11 +479,7 @@ test("runLauncher emits stable errors from real ensureBootstrap failure branches
   const corruptPath = resolve(corruptRoot, ".ai-local", "uv-bootstrap")
   mkdirSync(corruptPath, { recursive: true })
   const corruptResult = runWithError(corruptRoot, (command, args) => {
-    if (
-      (command === "python3" || command === "py") &&
-      args[0] === "-c" &&
-      args[1] === "import json,sys;print(json.dumps({'executable':sys.executable,'version':list(sys.version_info[:3])}))"
-    ) {
+    if (isPlatformProbe(command, args, probeScript)) {
       return probe("/absolute/python3")
     }
     return { status: 0 }
@@ -478,11 +492,7 @@ test("runLauncher emits stable errors from real ensureBootstrap failure branches
 
   const missingVenvRoot = mkdtempSync(join(tmpdir(), "task1-launcher-missing-venv-"))
   const missingVenvResult = runWithError(missingVenvRoot, (command, args) => {
-    if (
-      (command === "python3" || command === "py") &&
-      args[0] === "-c" &&
-      args[1] === "import json,sys;print(json.dumps({'executable':sys.executable,'version':list(sys.version_info[:3])}))"
-    ) {
+    if (isPlatformProbe(command, args, probeScript)) {
       return probe("/absolute/python3")
     }
     if (command === "/absolute/python3" && args[0] === "-m" && args[1] === "venv") {
@@ -499,19 +509,15 @@ test("runLauncher emits stable errors from real ensureBootstrap failure branches
   const missingPipRoot = mkdtempSync(join(tmpdir(), "task1-launcher-missing-pip-"))
   let tempPath
   const missingPipResult = runWithError(missingPipRoot, (command, args) => {
-    if (
-      (command === "python3" || command === "py") &&
-      args[0] === "-c" &&
-      args[1] === "import json,sys;print(json.dumps({'executable':sys.executable,'version':list(sys.version_info[:3])}))"
-    ) {
+    if (isPlatformProbe(command, args, probeScript)) {
       return probe("/absolute/python3")
     }
     if (command === "/absolute/python3" && args[0] === "-m" && args[1] === "venv") {
       tempPath = args[2]
-      fakeBootstrapPython(resolve(tempPath, process.platform === "win32" ? "Scripts" : "bin", "python"))
+      fakeBootstrapPython(resolve(tempPath, pythonDirectory, pythonExecutable))
       return { status: 0 }
     }
-    if (command === resolve(tempPath, binDir, "python") && args[0] === "-m" && args[1] === "pip" && args[2] === "--version") {
+    if (command === resolve(tempPath, binDir, pythonExecutable) && args[0] === "-m" && args[1] === "pip" && args[2] === "--version") {
       return { status: 1, stdout: "" }
     }
     return { status: 0 }
@@ -524,14 +530,10 @@ test("runLauncher emits stable errors from real ensureBootstrap failure branches
 
   const wrongUvRoot = mkdtempSync(join(tmpdir(), "task1-launcher-wrong-uv-"))
   const wrongUvPath = resolve(wrongUvRoot, ".ai-local", "uv-bootstrap")
-  const wrongUvPython = resolve(wrongUvPath, process.platform === "win32" ? "Scripts" : "bin", "python")
+  const wrongUvPython = resolve(wrongUvPath, pythonDirectory, pythonExecutable)
   fakeBootstrapPython(wrongUvPython)
   const wrongUvResult = runWithError(wrongUvRoot, (command, args) => {
-    if (
-      (command === "python3" || command === "py") &&
-      args[0] === "-c" &&
-      args[1] === "import json,sys;print(json.dumps({'executable':sys.executable,'version':list(sys.version_info[:3])}))"
-    ) {
+    if (isPlatformProbe(command, args, probeScript)) {
       return probe("/absolute/python3")
     }
     if (command === wrongUvPython && args[0] === "-c" && args[1] === 'from importlib.metadata import version; print(version("uv"))') {

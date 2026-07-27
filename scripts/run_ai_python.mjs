@@ -87,7 +87,7 @@ function temporaryBootstrapPath(repositoryRoot) {
 }
 
 function bootstrapPythonPath(baseDirectory) {
-  return join(baseDirectory, process.platform === "win32" ? "Scripts" : "bin", "python")
+  return join(baseDirectory, process.platform === "win32" ? "Scripts" : "bin", process.platform === "win32" ? "python.exe" : "python")
 }
 
 function bootstrapMissingVenvMessage(interpreter) {

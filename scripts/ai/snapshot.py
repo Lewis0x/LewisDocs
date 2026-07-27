@@ -1,6 +1,6 @@
 # Copyright 2026
 
-"""Deterministic private-content snapshots and local filesystem operations."""
+"""Deterministic content snapshots and local filesystem operations."""
 
 from __future__ import annotations
 

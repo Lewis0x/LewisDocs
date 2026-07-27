@@ -1,8 +1,6 @@
 import { withMermaid } from 'vitepress-plugin-mermaid'
 import { createSearchRenderer } from './search-render.mjs'
 
-const INCLUDE_AI_HANDBOOK = process.env.INCLUDE_AI_HANDBOOK === '1'
-
 const AI_SOURCES = [
   { product: 'claude-code', slug: 'quickstart', title: 'Claude Code Quickstart' },
   { product: 'claude-code', slug: 'memory', title: 'Claude Code Memory' },
@@ -16,7 +14,7 @@ const AI_SOURCES = [
   { product: 'codex', slug: 'customization', title: 'Codex Customization Overview' },
 ] as const
 
-const renderAiSearch = createSearchRenderer(INCLUDE_AI_HANDBOOK)
+const renderAiSearch = createSearchRenderer(true)
 
 // 中文分词器：使用浏览器原生 Intl.Segmenter
 // 支持的浏览器：Chrome 87+, Firefox 125+, Safari 14.1+, Edge 87+
@@ -115,9 +113,7 @@ export default withMermaid({
         ],
       },
       { text: '术语表', link: '/glossary' },
-      ...(INCLUDE_AI_HANDBOOK
-        ? [{ text: 'AI 双语手册', link: '/ai/zh-CN/learn/claude-code' }]
-        : []),
+      { text: 'AI 双语手册', link: '/ai/zh-CN/learn/claude-code' },
     ],
 
     sidebar: [
@@ -156,28 +152,24 @@ export default withMermaid({
           { text: '术语表（Glossary）', link: '/glossary' },
         ],
       },
-      ...(INCLUDE_AI_HANDBOOK
-        ? [
+      {
+        text: 'AI 双语手册',
+        collapsed: false,
+        items: [
+          { text: 'Claude Code 学习路径', link: '/ai/zh-CN/learn/claude-code' },
+          { text: 'Codex 学习路径', link: '/ai/zh-CN/learn/codex' },
+          ...AI_SOURCES.flatMap((source) => [
             {
-              text: 'AI 双语手册',
-              collapsed: false,
-              items: [
-                { text: 'Claude Code 学习路径', link: '/ai/zh-CN/learn/claude-code' },
-                { text: 'Codex 学习路径', link: '/ai/zh-CN/learn/codex' },
-                ...AI_SOURCES.flatMap((source) => [
-                  {
-                    text: `EN · ${source.title}`,
-                    link: `/ai/en/${source.product}/${source.slug}`,
-                  },
-                  {
-                    text: `中文 · ${source.title}`,
-                    link: `/ai/zh-CN/${source.product}/${source.slug}`,
-                  },
-                ]),
-              ],
+              text: `EN · ${source.title}`,
+              link: `/ai/en/${source.product}/${source.slug}`,
             },
-          ]
-        : []),
+            {
+              text: `中文 · ${source.title}`,
+              link: `/ai/zh-CN/${source.product}/${source.slug}`,
+            },
+          ]),
+        ],
+      },
     ],
 
     outline: {

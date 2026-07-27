@@ -1,6 +1,6 @@
 # Copyright 2026
 
-"""Private-root validation and atomic accepted-snapshot transactions."""
+"""Public content-root validation and atomic accepted-snapshot transactions."""
 
 from __future__ import annotations
 
@@ -18,8 +18,8 @@ if TYPE_CHECKING:
     from scripts.ai.snapshot import FileOps
 
 
-def validate_private_root(options: SyncOptions) -> Path:
-    """Return only an external or ignored private content root."""
+def validate_content_root(options: SyncOptions) -> Path:
+    """Return the fixed public root or a legacy external/ignored content root."""
     if not options.content_root.is_absolute():
         _validation_failed()
     try:
@@ -30,6 +30,8 @@ def validate_private_root(options: SyncOptions) -> Path:
     try:
         relative = content.relative_to(repo)
     except ValueError:
+        return content
+    if relative == Path("source-ai", "content"):
         return content
     if relative == Path() or relative.parts[0] != ".ai-content":
         _validation_failed()
@@ -96,7 +98,7 @@ def _git_status(repo: Path, arguments: list[str]) -> int:
 
 def replace_snapshot(request: AcceptanceRequest, file_ops: FileOps) -> None:
     """Swap paired trees and report while retaining rollback sources."""
-    content = validate_private_root(request.options)
+    content = validate_content_root(request.options)
     validate_support_paths(request.options, content)
     nonce = uuid.uuid4().hex
     parent = content.parent
@@ -221,4 +223,4 @@ def _rollback(  # noqa: PLR0913, PLR0917
 
 
 def _validation_failed() -> NoReturn:
-    raise AIAgentError(code=ErrorCode.VALIDATION_FAILED, message="private content root is invalid")
+    raise AIAgentError(code=ErrorCode.VALIDATION_FAILED, message="content root is invalid")

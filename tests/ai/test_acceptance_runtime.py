@@ -228,7 +228,7 @@ def test_ac6_runtime_secret_sentinel_never_reaches_artifacts(
         capture_output=True,
     )
     roots = (tmp_path, support, derived, ROOT / "docs" / ".vitepress" / "dist")
-    files = (
+    candidate_files = (
         *(path for root in roots if root.exists() for path in root.rglob("*") if path.is_file()),
         Path(__file__),
         ROOT / "tests" / "ai" / "test_acceptance.py",
@@ -236,6 +236,7 @@ def test_ac6_runtime_secret_sentinel_never_reaches_artifacts(
         ROOT / "project-docs" / "08-ai-agent-handbook-acceptance.md",
         ROOT / ".superpowers" / "sdd" / "task-6" / "report.md",
     )
+    files = tuple(path for path in candidate_files if path.exists())
 
     assert actual_exit == expected_exit
     _secret_absent(secret, (stdout.encode(), stderr.encode(), diff.stdout, diff.stderr))

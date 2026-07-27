@@ -1,6 +1,6 @@
 # Copyright 2026
 
-"""Internal AI build inventory verification."""
+"""Public AI build inventory verification."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, slots=True)
 class VerifyBuildOptions:
-    """Paths required to verify one internal VitePress build."""
+    """Paths required to verify one public VitePress build."""
 
     repo_root: Path
     dist_root: Path
@@ -42,7 +42,7 @@ class _SearchIndex(BaseModel):
 
 
 def verify_dist(options: VerifyBuildOptions) -> None:
-    """Verify the internal HTML and local-search route inventory."""
+    """Verify the public HTML and local-search route inventory."""
     try:
         manifest = load_sources(options.manifest_path)
         expected = _expected_routes(manifest)
@@ -73,7 +73,7 @@ def verify_dist(options: VerifyBuildOptions) -> None:
 
 
 def main() -> int:
-    """Verify the repository's current internal build."""
+    """Verify the repository's current public build."""
     repo_root = Path(__file__).resolve().parents[2]
     try:
         verify_dist(
@@ -84,7 +84,7 @@ def main() -> int:
             )
         )
     except AIAgentError as error:
-        _ = sys.stderr.write(f"{error.code}: internal AI build verification failed\n")
+        _ = sys.stderr.write(f"{error.code}: public AI build verification failed\n")
         return 1
     _ = sys.stdout.write("verified 22 AI handbook routes\n")
     return 0
@@ -122,7 +122,7 @@ def _load_search_index(dist_root: Path) -> _SearchIndex:
 def _validation_failed() -> NoReturn:
     raise AIAgentError(
         code=ErrorCode.VALIDATION_FAILED,
-        message="internal AI build inventory is invalid",
+        message="public AI build inventory is invalid",
     )
 
 

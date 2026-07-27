@@ -24,7 +24,7 @@ from scripts.ai.sync import (
     SyncOptions,
     SyncReport,
     run_sync,
-    validate_private_root,
+    validate_content_root,
 )
 from scripts.ai.types import SourceId
 from tests.ai.fixture_support import (
@@ -49,7 +49,6 @@ FAULTS = (
     "report:replace",
     "cleanup",
 )
-VALIDATION_EXIT = 6
 
 
 def _page_result(
@@ -77,10 +76,7 @@ def _report(*pages: PageSyncResult) -> SyncReport:
 def test_sync_main_prints_no_changes_then_canonical_report(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
 ) -> None:
-    content = tmp_path / "content"
-    content.mkdir()
     expected = _report(_page_result())
     received: list[tuple[SyncOptions, SyncDeps]] = []
 
@@ -89,7 +85,7 @@ def test_sync_main_prints_no_changes_then_canonical_report(
         return expected
 
     monkeypatch.setattr(sync, "run_sync", fake_run)
-    monkeypatch.setenv("AI_CONTENT_ROOT", str(content))
+    monkeypatch.setenv("AI_CONTENT_ROOT", "ignored-override")
     monkeypatch.delenv("MOONSHOT_API_KEY", raising=False)
 
     exit_code = sync.main()
@@ -103,7 +99,7 @@ def test_sync_main_prints_no_changes_then_canonical_report(
     assert len(received) == 1
     options, deps = received[0]
     assert options.repo_root == ROOT
-    assert options.content_root == content
+    assert options.content_root == ROOT / "source-ai" / "content"
     assert options.staging_root == ROOT / ".ai-local" / "staging"
     assert options.manifest_path == ROOT / "source-ai" / "sources.yaml"
     assert options.report_path == ROOT / ".ai-local" / "report.json"
@@ -115,10 +111,7 @@ def test_sync_main_prints_no_changes_then_canonical_report(
 def test_sync_main_prints_stable_changed_table_then_canonical_report(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
 ) -> None:
-    content = tmp_path / "content"
-    content.mkdir()
     expected = _report(
         _page_result(source_id="claude-code/quickstart", changed=True),
         _page_result(source_id="codex/cli"),
@@ -129,7 +122,6 @@ def test_sync_main_prints_stable_changed_table_then_canonical_report(
         return expected
 
     monkeypatch.setattr(sync, "run_sync", fake_run)
-    monkeypatch.setenv("AI_CONTENT_ROOT", str(content))
 
     exit_code = sync.main()
 
@@ -156,16 +148,13 @@ def test_sync_main_prints_stable_changed_table_then_canonical_report(
         (ErrorCode.WRITE_FAILED, None, 7),
     ],
 )
-def test_sync_main_maps_errors_to_safe_single_line_output(  # noqa: PLR0913, PLR0917
+def test_sync_main_maps_errors_to_safe_single_line_output(
     code: ErrorCode,
     source_id: SourceId | None,
     exit_code: int,
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
 ) -> None:
-    content = tmp_path / "content"
-    content.mkdir()
     sentinel = "process-only-secret-sentinel"
 
     def failing_run(options: SyncOptions, deps: SyncDeps) -> SyncReport:
@@ -173,7 +162,6 @@ def test_sync_main_maps_errors_to_safe_single_line_output(  # noqa: PLR0913, PLR
         raise AIAgentError(code=code, message=f"unsafe {sentinel}", source_id=source_id)
 
     monkeypatch.setattr(sync, "run_sync", failing_run)
-    monkeypatch.setenv("AI_CONTENT_ROOT", str(content))
 
     actual_exit = sync.main()
 
@@ -187,20 +175,20 @@ def test_sync_main_maps_errors_to_safe_single_line_output(  # noqa: PLR0913, PLR
     assert "Traceback" not in stdout
 
 
-@pytest.mark.parametrize("content_root", [None, "", "relative/content"])
-def test_sync_main_rejects_missing_empty_or_relative_content_root_before_client_creation(
+@pytest.mark.parametrize("content_root", [None, "", "relative/content", "D:/other/content"])
+def test_sync_main_uses_fixed_public_content_root(
     content_root: str | None,
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    calls: list[str] = []
+    received: list[SyncOptions] = []
 
-    def unexpected_run(options: SyncOptions, deps: SyncDeps) -> SyncReport:
-        del options, deps
-        calls.append("run")
-        pytest.fail("invalid content root must not invoke sync")
+    def fake_run(options: SyncOptions, deps: SyncDeps) -> SyncReport:
+        del deps
+        received.append(options)
+        return _report(_page_result())
 
-    monkeypatch.setattr(sync, "run_sync", unexpected_run)
+    monkeypatch.setattr(sync, "run_sync", fake_run)
     if content_root is None:
         monkeypatch.delenv("AI_CONTENT_ROOT", raising=False)
     else:
@@ -209,12 +197,11 @@ def test_sync_main_rejects_missing_empty_or_relative_content_root_before_client_
     exit_code = sync.main()
 
     stdout, stderr = capsys.readouterr()
-    assert exit_code == VALIDATION_EXIT
+    assert exit_code == 0
     assert stderr == ""
-    assert calls == []
-    assert stdout.count("\n") == 1
-    assert "code=VALIDATION_FAILED" in stdout
-    assert "source_id=-" in stdout
+    assert len(received) == 1
+    assert received[0].content_root == ROOT / "source-ai" / "content"
+    assert stdout.startswith("no changes\n")
 
 
 def _unreachable_translator(client: httpx2.Client, request: TranslationInput) -> str:
@@ -350,9 +337,24 @@ def test_private_roots_inside_the_repository_are_rejected_before_network(
     )
 
     with pytest.raises(AIAgentError) as exc_info:
-        _ = validate_private_root(options)
+        _ = validate_content_root(options)
 
     assert exc_info.value.code == ErrorCode.VALIDATION_FAILED
+
+
+def test_fixed_public_content_root_inside_repository_is_accepted(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    content = repo / "source-ai" / "content"
+    content.mkdir(parents=True)
+    options = SyncOptions(
+        repo_root=repo,
+        content_root=content,
+        staging_root=repo / ".ai-local" / "stage",
+        manifest_path=repo / "source-ai" / "sources.yaml",
+        report_path=repo / ".ai-local" / "report.json",
+    )
+
+    assert validate_content_root(options) == content.resolve()
 
 
 def test_private_root_rejects_force_tracked_ignored_content_before_client_creation(
@@ -372,9 +374,9 @@ def test_private_root_rejects_force_tracked_ignored_content_before_client_creati
         report_path=tmp_path / "report.json",
     )
 
-    assert validate_private_root(options) == allowed.resolve()
+    assert validate_content_root(options) == allowed.resolve()
     assert (
-        validate_private_root(options.model_copy(update={"content_root": allowed / "child"}))
+        validate_content_root(options.model_copy(update={"content_root": allowed / "child"}))
         == (allowed / "child").resolve()
     )
 

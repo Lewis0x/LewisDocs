@@ -1,6 +1,6 @@
 # Copyright 2026
 
-"""Private accepted-content materialization boundary."""
+"""Public accepted-content materialization boundary."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from scripts.ai.errors import AIAgentError, ErrorCode
 from scripts.ai.manifest import load_sources
 from scripts.ai.pages import validate_candidate
 from scripts.ai.sync_contracts import SyncOptions
-from scripts.ai.sync_transaction import validate_private_root
+from scripts.ai.sync_transaction import validate_content_root
 
 if TYPE_CHECKING:
     from scripts.ai.types import SourceId
@@ -27,7 +27,7 @@ _FRONTMATTER_END: Final = b"\n---\n"
 
 @dataclass(frozen=True, slots=True)
 class MaterializeOptions:
-    """Paths required to derive private AI documentation."""
+    """Paths required to derive public AI documentation."""
 
     repo_root: Path
     content_root: Path
@@ -52,7 +52,7 @@ class _SwapState:
 
 
 def materialize_ai(options: MaterializeOptions) -> tuple[MaterializedRoute, ...]:
-    """Derive validated private content into the VitePress source tree."""
+    """Derive validated public content into the VitePress source tree."""
     content_root = _validated_content_root(options)
     manifest = load_sources(options.manifest_path)
     validate_candidate(
@@ -116,7 +116,7 @@ def _validated_content_root(options: MaterializeOptions) -> Path:
         manifest_path=options.manifest_path,
         report_path=options.repo_root / ".ai-local" / "report.json",
     )
-    return validate_private_root(sync_options)
+    return validate_content_root(sync_options)
 
 
 def _require_derived_target(options: MaterializeOptions) -> None:
@@ -239,7 +239,7 @@ def _rollback(
 def _validation_failed() -> NoReturn:
     raise AIAgentError(
         code=ErrorCode.VALIDATION_FAILED,
-        message="private content root is invalid",
+        message="content root is invalid",
     )
 
 

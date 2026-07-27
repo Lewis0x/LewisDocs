@@ -1,6 +1,6 @@
 # Copyright 2026
 
-"""Private bilingual content synchronization orchestration and CLI output."""
+"""Public bilingual content synchronization orchestration and CLI output."""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ from scripts.ai.sync_contracts import (
 )
 from scripts.ai.sync_transaction import (
     replace_snapshot,
-    validate_private_root,
+    validate_content_root,
     validate_support_paths,
     write_report,
 )
@@ -62,7 +62,7 @@ __all__ = (
     "main",
     "replace_snapshot",
     "run_sync",
-    "validate_private_root",
+    "validate_content_root",
 )
 
 _ERROR_PRESENTATION: Final = {
@@ -77,7 +77,7 @@ _ERROR_PRESENTATION: Final = {
 
 def run_sync(options: SyncOptions, deps: SyncDeps) -> SyncReport:
     """Fetch, compare, translate changed pages, and accept one full candidate."""
-    content_root = validate_private_root(options)
+    content_root = validate_content_root(options)
     validate_support_paths(options, content_root)
     manifest = load_sources(options.manifest_path)
     existing = _existing_pages(content_root, manifest)
@@ -197,7 +197,7 @@ def _chinese(  # noqa: PLR0913, PLR0917
 
 
 def _validation_failed() -> NoReturn:
-    raise AIAgentError(code=ErrorCode.VALIDATION_FAILED, message="private content root is invalid")
+    raise AIAgentError(code=ErrorCode.VALIDATION_FAILED, message="content root is invalid")
 
 
 def main() -> int:
@@ -214,16 +214,10 @@ def main() -> int:
 
 
 def _default_options() -> SyncOptions:
-    content_value = os.environ.get("AI_CONTENT_ROOT")
-    if content_value is None or not content_value.strip():
-        _validation_failed()
-    content_root = Path(content_value)
-    if not content_root.is_absolute():
-        _validation_failed()
     repo_root = Path(__file__).resolve().parents[2]
     return SyncOptions(
         repo_root=repo_root,
-        content_root=content_root,
+        content_root=repo_root / "source-ai" / "content",
         staging_root=repo_root / ".ai-local" / "staging",
         manifest_path=repo_root / "source-ai" / "sources.yaml",
         report_path=repo_root / ".ai-local" / "report.json",

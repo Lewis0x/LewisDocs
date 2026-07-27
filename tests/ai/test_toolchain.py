@@ -34,6 +34,7 @@ LOCKFILE = ROOT / "requirements-uv-bootstrap.lock"
 UV_LOCK = ROOT / "uv.lock"
 THEME_CSS = ROOT / "docs/.vitepress/theme/custom.css"
 VITEPRESS_CONFIG = ROOT / "docs/.vitepress/config.ts"
+AI_SYNC_WORKFLOW = ROOT / ".github/workflows/ai-handbook-sync.yml"
 BUILD_SCRIPT = (
     "vitepress build docs && python scripts/watermark.py && "
     "node scripts/ai_content_gate.mjs verify-dist"
@@ -119,6 +120,23 @@ def test_package_contract() -> None:
     assert "tsx" not in dev_deps
     assert "@cloudflare/workers-types" not in dev_deps
     assert "playwright-core" not in dev_deps
+
+
+def test_public_handbook_is_unconditional_and_sync_workflow_is_manual() -> None:
+    config = VITEPRESS_CONFIG.read_text(encoding="utf-8")
+    assert "INCLUDE_AI_HANDBOOK" not in config
+    assert "createSearchRenderer(true)" in config
+
+    workflow = AI_SYNC_WORKFLOW.read_text(encoding="utf-8")
+    assert "workflow_dispatch:" in workflow
+    assert "schedule:" not in workflow
+    assert "contents: write" in workflow
+    assert "MOONSHOT_API_KEY: ${{ secrets.MOONSHOT_API_KEY }}" in workflow
+    assert "npm run ai:sync" in workflow
+    assert "git add -- source-ai/content" in workflow
+    add_index = workflow.index("git add -- source-ai/content")
+    diff_index = workflow.index("git diff --cached --quiet")
+    assert add_index < diff_index
 
 
 def test_tablet_navigation_uses_mobile_controls() -> None:
