@@ -24,7 +24,7 @@ _COMMON_FIELDS: Final = (
 )
 _CHINESE_FIELDS: Final = (*_COMMON_FIELDS, "translation_of", "translation_model", "ai_translated")
 WARNING: Final = "本页由 AI 翻译，可能存在误差；如有歧义，以英文原文为准。"  # noqa: RUF001
-_MODEL: Final = "kimi-k3"
+_MODEL: Final = "kimi-for-coding"
 _FRONTMATTER_ERROR: Final = "invalid frontmatter"
 _HASH_RE: Final = re.compile(r"[0-9a-f]{64}\Z")
 _H1_RE: Final = re.compile(r"^#\s+(.+?)\s*$", re.MULTILINE)
@@ -43,7 +43,7 @@ class AcceptedPage(BaseModel):
     owner: Owner
     content_sha256: str
     translation_of: SourceId | None = None
-    translation_model: Literal["kimi-k3"] | None = None
+    translation_model: Literal["kimi-for-coding"] | None = None
     ai_translated: Literal[True] | None = None
     body: str
 
@@ -66,7 +66,7 @@ class AcceptedPage(BaseModel):
     @model_validator(mode="after")
     def _require_translation_shape(self) -> AcceptedPage:
         language = self.lang
-        match language:  # noqa: MATCH_OK
+        match language:
             case "en":
                 if any(
                     field is not None

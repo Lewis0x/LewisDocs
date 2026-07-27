@@ -1,5 +1,5 @@
 # Copyright 2026
-"""Moonshot API adapter for Chinese markdown translation."""
+"""Kimi Code API adapter for Chinese markdown translation."""
 
 from __future__ import annotations
 
@@ -22,9 +22,9 @@ from scripts.ai.protect import protect_markdown, restore_and_validate
 if TYPE_CHECKING:
     from scripts.ai.types import SourceId
 
-# China-platform keys require the matching regional endpoint.
-# https://platform.kimi.com/docs/api/overview
-_ENDPOINT: Final = "https://api.moonshot.cn/v1/chat/completions"
+# Kimi Code Console keys require the managed coding endpoint.
+# https://www.kimi.com/code/docs/#api-%E6%8E%A5%E5%85%A5
+_ENDPOINT: Final = "https://api.kimi.com/coding/v1/chat/completions"
 _SERVER_ERROR_MIN_STATUS: Final = 500
 _SYSTEM_PROMPT: Final = (
     "你必须只输出中文 Markdown, 并保持原文结构与占位符令牌不变, 不得修改格式、标点或保护段落。"
@@ -42,12 +42,11 @@ class KimiMessage(BaseModel):
 
 
 class KimiRequest(BaseModel):
-    """Canonical request model for Moonshot API."""
+    """Canonical request model for the Kimi Code OpenAI-compatible API."""
 
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="forbid")
 
-    model: Literal["kimi-k3"]
-    reasoning_effort: Literal["low"]
+    model: Literal["kimi-for-coding"]
     messages: tuple[KimiMessage, ...] = Field(min_length=2, max_length=2)
 
 
@@ -125,8 +124,7 @@ def translate_markdown(client: httpx2.Client, request: TranslationInput) -> str:
     """Protect literals, call Kimi, validate completion, and restore literals."""
     protected = protect_markdown(request.markdown)
     payload = KimiRequest(
-        model="kimi-k3",
-        reasoning_effort="low",
+        model="kimi-for-coding",
         messages=(
             KimiMessage(
                 role="system",
