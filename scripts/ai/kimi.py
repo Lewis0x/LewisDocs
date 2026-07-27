@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, Final, Literal, NoReturn
 
@@ -28,6 +29,13 @@ _ENDPOINT: Final = "https://api.kimi.com/coding/v1/chat/completions"
 _SERVER_ERROR_MIN_STATUS: Final = 500
 _MAX_TRANSLATION_CHARS: Final = 10_000
 _PROVIDER_PLACEHOLDER: Final = "@@LEWISDOCS_LITERAL@@"
+_STRUCTURE_PREFIX_PATTERN: Final = (
+    r"(?m)^(?:#{1,6}[ \t]+|[ \t]*(?:[-+*]|\d+\.)[ \t]+|[ \t]*>+[ \t]*)"
+)
+_TABLE_DELIMITER_PATTERN: Final = (
+    r"^[ \t]*\|?[ \t]*:?-{3,}:?" + r"(?:[ \t]*\|[ \t]*:?-{3,}:?)+[ \t]*\|?[ \t]*$"
+)
+_STRUCTURE_RE: Final = re.compile(rf"{_STRUCTURE_PREFIX_PATTERN}|{_TABLE_DELIMITER_PATTERN}|\|")
 _TRANSLATION_TIMEOUT: Final = httpx2.Timeout(
     connect=10.0,
     read=900.0,
@@ -122,6 +130,12 @@ class _TranslationChunk:
     separator: str
 
 
+@dataclass(frozen=True, slots=True)
+class _ProviderPayload:
+    text: str
+    replacements: tuple[str, ...]
+
+
 def _raise_translation_failed(
     source_id: SourceId,
     reason: TranslationFailureReason,
@@ -192,12 +206,13 @@ def _translate_chunk(
     chunk: _TranslationChunk,
     auth: str,
 ) -> str:
+    provider = _provider_payload(chunk.protected)
     payload = KimiRequest(
         model="k3",
         reasoning_effort="low",
         messages=(
             KimiMessage(role="system", content=_SYSTEM_PROMPT),
-            KimiMessage(role="user", content=_provider_text(chunk.protected)),
+            KimiMessage(role="user", content=provider.text),
         ),
     )
     response = client.post(
@@ -211,7 +226,7 @@ def _translate_chunk(
 
     try:
         normalized_completion = _normalize_provider_placeholders(
-            chunk.protected,
+            provider,
             completion,
         )
         return restore_and_validate(
@@ -233,18 +248,40 @@ def _translate_chunk(
         )
 
 
-def _provider_text(protected: ProtectedMarkdown) -> str:
-    text = protected.text
+def _provider_payload(protected: ProtectedMarkdown) -> _ProviderPayload:
+    candidates: list[tuple[int, int, str]] = []
     for span in protected.spans:
-        text = text.replace(span.placeholder, _PROVIDER_PLACEHOLDER, 1)
-    return text
+        start = protected.text.find(span.placeholder)
+        if start < 0:
+            raise AIAgentError(
+                code=ErrorCode.TRANSLATION_FAILED,
+                message=_TRANSLATION_FAILED_MESSAGE,
+                reason=TranslationFailureReason.OUTPUT_TOKEN_MISSING,
+            )
+        candidates.append((start, start + len(span.placeholder), span.placeholder))
+    candidates.extend(
+        (match.start(), match.end(), match.group(0))
+        for match in _STRUCTURE_RE.finditer(protected.text)
+    )
+
+    parts: list[str] = []
+    replacements: list[str] = []
+    cursor = 0
+    for start, end, replacement in sorted(candidates):
+        if start < cursor:
+            continue
+        parts.extend((protected.text[cursor:start], _PROVIDER_PLACEHOLDER))
+        replacements.append(replacement)
+        cursor = end
+    parts.append(protected.text[cursor:])
+    return _ProviderPayload(text="".join(parts), replacements=tuple(replacements))
 
 
 def _normalize_provider_placeholders(
-    protected: ProtectedMarkdown,
+    provider: _ProviderPayload,
     completion: str,
 ) -> str:
-    expected_count = len(protected.spans)
+    expected_count = len(provider.replacements)
     found_count = completion.count(_PROVIDER_PLACEHOLDER)
     if found_count < expected_count:
         raise AIAgentError(
@@ -260,8 +297,8 @@ def _normalize_provider_placeholders(
         )
 
     normalized = completion
-    for span in protected.spans:
-        normalized = normalized.replace(_PROVIDER_PLACEHOLDER, span.placeholder, 1)
+    for replacement in provider.replacements:
+        normalized = normalized.replace(_PROVIDER_PLACEHOLDER, replacement, 1)
     return normalized
 
 
