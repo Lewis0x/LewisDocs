@@ -44,6 +44,7 @@ EXPECTED_MAX_TRANSLATION_CHARS: Final = 10_000
 EXPECTED_TRANSLATION_CHUNKS: Final = 3
 RETRY_FAILURE_THRESHOLD: Final = 4_000
 PROVIDER_PLACEHOLDER: Final = "@@LEWISDOCS_LITERAL@@"
+MIN_STRUCTURE_PLACEHOLDERS: Final = 8
 
 BAD_RESPONSES: Final[tuple[bytes, ...]] = (
     b"not json",
@@ -78,6 +79,8 @@ def _provider_markdown(markdown: str) -> str:
     text = protected.text
     for span in protected.spans:
         text = text.replace(span.placeholder, PROVIDER_PLACEHOLDER, 1)
+    if text.startswith("# "):
+        text = PROVIDER_PLACEHOLDER + text[2:]
     return text
 
 
@@ -327,12 +330,15 @@ def test_translate_uses_one_stable_provider_placeholder_for_all_literals() -> No
 
     assert result == markdown  # noqa: S101
     assert observed_chunks == [  # noqa: S101
-        f"# Short retry\n\nFirst {PROVIDER_PLACEHOLDER}, then {PROVIDER_PLACEHOLDER}."
+        (
+            f"{PROVIDER_PLACEHOLDER}Short retry\n\n"
+            f"First {PROVIDER_PLACEHOLDER}, then {PROVIDER_PLACEHOLDER}."
+        )
     ]
 
 
-def test_translate_keeps_splitting_short_structure_failures() -> None:
-    """Isolate Markdown markers when Kimi changes structure in a short chunk."""
+def test_translate_protects_markdown_structure_before_provider() -> None:
+    """Keep Markdown structure out of the provider's editable text."""
     markdown = "# Short heading that must keep its exact level"
     observed_chunks: list[str] = []
 
@@ -350,7 +356,43 @@ def test_translate_keeps_splitting_short_structure_failures() -> None:
         )
 
     assert result == markdown  # noqa: S101
-    assert len(observed_chunks) > 1  # noqa: S101
+    assert observed_chunks == [  # noqa: S101
+        f"{PROVIDER_PLACEHOLDER}Short heading that must keep its exact level"
+    ]
+
+
+def test_translate_protects_lists_quotes_and_table_syntax() -> None:
+    """Restore structural markers exactly after translating prose."""
+    markdown = (
+        "# Structure\n\n"
+        "- list item\n\n"
+        "> quoted text\n\n"
+        "| A | B |\n"
+        "| --- | --- |\n"
+        "| value | value |\n"
+    )
+    observed_chunks: list[str] = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        payload = KimiRequest.model_validate_json(request.content)
+        chunk = payload.messages[1].content
+        observed_chunks.append(chunk)
+        return _json_response(request, chunk)
+
+    api_key = SecretStr(secrets.token_urlsafe(48))
+    with httpx2.Client(transport=httpx2.MockTransport(handler)) as client:
+        result = translate_markdown(
+            client,
+            TranslationInput(source_id=SOURCE_ID, markdown=markdown, api_key=api_key),
+        )
+
+    assert result == markdown  # noqa: S101
+    assert len(observed_chunks) == 1  # noqa: S101
+    assert (  # noqa: S101
+        observed_chunks[0].count(PROVIDER_PLACEHOLDER) >= MIN_STRUCTURE_PLACEHOLDERS
+    )
+    assert "# " not in observed_chunks[0]  # noqa: S101
+    assert "| --- | --- |" not in observed_chunks[0]  # noqa: S101
 
 
 @pytest.mark.parametrize("response_body", BAD_RESPONSES)
