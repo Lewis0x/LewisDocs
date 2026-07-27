@@ -96,8 +96,13 @@ def restore_and_validate(
     translated = _unwrap_outer_markdown_fence(translated)
     expected_tokens = tuple(span.placeholder for span in protected.spans)
     found_tokens = tuple(_TOKEN_RE.findall(translated))
+    expected_counts, found_counts = Counter(expected_tokens), Counter(found_tokens)
+    if expected_counts - found_counts:
+        _fail(TranslationFailureReason.OUTPUT_TOKEN_MISSING)
+    if found_counts - expected_counts:
+        _fail(TranslationFailureReason.OUTPUT_TOKEN_UNEXPECTED)
     if found_tokens != expected_tokens:
-        _fail(TranslationFailureReason.OUTPUT_TOKEN_INVALID)
+        _fail(TranslationFailureReason.OUTPUT_TOKEN_REORDERED)
     if _structure_signature(source) != _structure_signature(translated):
         _fail(TranslationFailureReason.OUTPUT_STRUCTURE_INVALID)
 
