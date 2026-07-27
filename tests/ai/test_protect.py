@@ -171,6 +171,20 @@ def test_restore_allows_prose_translation_and_restores_literals() -> None:
     assert all(span.original in restored for span in protected.spans)  # noqa: S101
 
 
+@pytest.mark.parametrize(("opening", "closing"), [("```markdown", "```"), ("~~~md", "~~~")])
+def test_restore_accepts_one_outer_markdown_fence(opening: str, closing: str) -> None:
+    """Discard a provider presentation wrapper before strict validation."""
+    source, _, protected = _fixture()
+    translated = protected.text.replace("# Synthetic handbook", "# 合成手册").strip()
+    restored = restore_and_validate(
+        source,
+        protected,
+        f"{opening}\n{translated}\n{closing}",
+    )
+    assert restored.startswith("# 合成手册")  # noqa: S101
+    assert restored.endswith("| plain prose | sample |")  # noqa: S101
+
+
 @pytest.mark.parametrize(
     "mutation",
     [

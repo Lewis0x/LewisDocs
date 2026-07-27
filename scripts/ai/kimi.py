@@ -33,7 +33,8 @@ _TRANSLATION_TIMEOUT: Final = httpx2.Timeout(
     pool=10.0,
 )
 _SYSTEM_PROMPT: Final = (
-    "你必须只输出中文 Markdown, 并保持原文结构与占位符令牌不变, 不得修改格式、标点或保护段落。"
+    "你必须只输出中文 Markdown, 不要解释, 不要用代码围栏包裹答案; "
+    "保持原文结构与占位符令牌不变, 不得修改格式、标点或保护段落。"
 )
 _TRANSLATION_FAILED_MESSAGE: Final = "translation failed"
 
