@@ -40,6 +40,8 @@ MARKDOWN: Final = (
 FAILURE_MESSAGE: Final = "translation failed"
 ENDPOINT: Final = "https://api.kimi.com/coding/v1/chat/completions"
 EXPECTED_TRANSLATION_READ_TIMEOUT: Final = 900.0
+EXPECTED_MAX_TRANSLATION_CHARS: Final = 10_000
+EXPECTED_TRANSLATION_CHUNKS: Final = 3
 
 BAD_RESPONSES: Final[tuple[bytes, ...]] = (
     b"not json",
@@ -217,6 +219,32 @@ def test_translate_posts_exact_wire_and_restores_protected_literals(
     assert "https://example.test/docs" in result  # noqa: S101
     captured = capsys.readouterr()
     assert sentinel not in captured.out + captured.err  # noqa: S101
+
+
+def test_translate_chunks_large_markdown_and_reassembles_original_boundaries() -> None:
+    """Keep large documents ordered by validating bounded provider calls."""
+    paragraph = "Translate this sentence exactly. " * 220
+    markdown = "# Chunked handbook\n\n" + "\n\n".join(
+        f"{paragraph}`literal_{index}`." for index in range(3)
+    )
+    observed_chunks: list[str] = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        payload = KimiRequest.model_validate_json(request.content)
+        chunk = payload.messages[1].content
+        observed_chunks.append(chunk)
+        return _json_response(request, chunk)
+
+    api_key = SecretStr(secrets.token_urlsafe(48))
+    with httpx2.Client(transport=httpx2.MockTransport(handler)) as client:
+        result = translate_markdown(
+            client,
+            TranslationInput(source_id=SOURCE_ID, markdown=markdown, api_key=api_key),
+        )
+
+    assert result == markdown  # noqa: S101
+    assert len(observed_chunks) == EXPECTED_TRANSLATION_CHUNKS  # noqa: S101
+    assert all(len(chunk) <= EXPECTED_MAX_TRANSLATION_CHARS for chunk in observed_chunks)  # noqa: S101
 
 
 @pytest.mark.parametrize("response_body", BAD_RESPONSES)

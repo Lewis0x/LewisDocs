@@ -17,7 +17,7 @@ from pydantic import (
 )
 
 from scripts.ai.errors import AIAgentError, ErrorCode, TranslationFailureReason
-from scripts.ai.protect import protect_markdown, restore_and_validate
+from scripts.ai.protect import ProtectedMarkdown, protect_markdown, restore_and_validate
 
 if TYPE_CHECKING:
     from scripts.ai.types import SourceId
@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 # https://www.kimi.com/code/docs/#api-%E6%8E%A5%E5%85%A5
 _ENDPOINT: Final = "https://api.kimi.com/coding/v1/chat/completions"
 _SERVER_ERROR_MIN_STATUS: Final = 500
+_MAX_TRANSLATION_CHARS: Final = 10_000
 _TRANSLATION_TIMEOUT: Final = httpx2.Timeout(
     connect=10.0,
     read=900.0,
@@ -102,6 +103,13 @@ class TranslationInput:
     api_key: SecretStr
 
 
+@dataclass(frozen=True, slots=True)
+class _TranslationChunk:
+    protected: ProtectedMarkdown
+    source: str
+    separator: str
+
+
 def _raise_translation_failed(
     source_id: SourceId,
     reason: TranslationFailureReason,
@@ -133,29 +141,36 @@ def _provider_failure_reason(status_code: int) -> TranslationFailureReason:
 def translate_markdown(client: httpx2.Client, request: TranslationInput) -> str:
     """Protect literals, call Kimi, validate completion, and restore literals."""
     protected = protect_markdown(request.markdown)
-    payload = KimiRequest(
-        model="k3",
-        reasoning_effort="low",
-        messages=(
-            KimiMessage(
-                role="system",
-                content=_SYSTEM_PROMPT,
-            ),
-            KimiMessage(role="user", content=protected.text),
-        ),
-    )
     auth = f"Bearer {request.api_key.get_secret_value()}"
 
     try:
-        response = client.post(
-            _ENDPOINT,
-            headers={"Authorization": auth},
-            json=payload.model_dump(mode="json"),
-            timeout=_TRANSLATION_TIMEOUT,
-        )
-        _ = response.raise_for_status()
-        completion = KimiResponse.model_validate_json(response.content).choices[0].message.content
-        return restore_and_validate(request.markdown, protected, completion)
+        translated: list[str] = []
+        for chunk in _translation_chunks(protected):
+            payload = KimiRequest(
+                model="k3",
+                reasoning_effort="low",
+                messages=(
+                    KimiMessage(role="system", content=_SYSTEM_PROMPT),
+                    KimiMessage(role="user", content=chunk.protected.text),
+                ),
+            )
+            response = client.post(
+                _ENDPOINT,
+                headers={"Authorization": auth},
+                json=payload.model_dump(mode="json"),
+                timeout=_TRANSLATION_TIMEOUT,
+            )
+            _ = response.raise_for_status()
+            completion = (
+                KimiResponse.model_validate_json(response.content).choices[0].message.content
+            )
+            translated.extend(
+                (
+                    restore_and_validate(chunk.source, chunk.protected, completion),
+                    chunk.separator,
+                )
+            )
+        return "".join(translated)
     except AIAgentError as error:
         _raise_translation_failed(
             request.source_id,
@@ -176,3 +191,42 @@ def translate_markdown(client: httpx2.Client, request: TranslationInput) -> str:
             request.source_id,
             TranslationFailureReason.RESPONSE_INVALID,
         )
+
+
+def _translation_chunks(protected: ProtectedMarkdown) -> tuple[_TranslationChunk, ...]:
+    chunks: list[_TranslationChunk] = []
+    for text, separator in _split_text(protected.text):
+        spans = tuple(span for span in protected.spans if span.placeholder in text)
+        chunk = ProtectedMarkdown(text=text, spans=spans)
+        source = text
+        for span in spans:
+            source = source.replace(span.placeholder, span.original, 1)
+        chunks.append(_TranslationChunk(protected=chunk, source=source, separator=separator))
+    return tuple(chunks)
+
+
+def _split_text(text: str) -> tuple[tuple[str, str], ...]:
+    chunks: list[tuple[str, str]] = []
+    cursor = 0
+    while len(text) - cursor > _MAX_TRANSLATION_CHARS:
+        limit = cursor + _MAX_TRANSLATION_CHARS
+        boundary = text.rfind("\n\n", cursor + 1, limit + 1)
+        if boundary < 0:
+            boundary = text.rfind("\n", cursor + 1, limit + 1)
+        if boundary < 0:
+            boundary = text.rfind(" ", cursor + 1, limit + 1)
+        if boundary < 0:
+            boundary = limit
+
+        separator_end = boundary
+        if text[boundary : boundary + 1] == "\n":
+            while text[separator_end : separator_end + 1] == "\n":
+                separator_end += 1
+        elif text[boundary : boundary + 1] == " ":
+            while text[separator_end : separator_end + 1] == " ":
+                separator_end += 1
+
+        chunks.append((text[cursor:boundary], text[boundary:separator_end]))
+        cursor = max(boundary, separator_end)
+    chunks.append((text[cursor:], ""))
+    return tuple(chunk for chunk in chunks if chunk[0])
