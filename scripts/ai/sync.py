@@ -25,6 +25,7 @@ from scripts.ai.pages import (
     render_chinese_page,
     render_english_page,
     validate_candidate,
+    validate_english_candidate,
 )
 from scripts.ai.snapshot import RealFileOps
 from scripts.ai.sync_contracts import (
@@ -130,9 +131,12 @@ def _existing_pages(
     manifest: SourceManifest,
 ) -> dict[SourceId, tuple[bytes, bytes, str]]:
     english, chinese = content / "en", content / "zh-CN"
-    if english.exists() != chinese.exists():
+    if chinese.exists() and not english.exists():
         _validation_failed()
     if not english.exists():
+        return {}
+    if not chinese.exists():
+        validate_english_candidate(managed_root=content, manifest=manifest)
         return {}
     validate_candidate(
         managed_root=content,

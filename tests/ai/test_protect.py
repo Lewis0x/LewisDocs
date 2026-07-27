@@ -173,6 +173,14 @@ def test_restore_allows_prose_translation_and_restores_literals() -> None:
     assert all(span.original in restored for span in protected.spans)  # noqa: S101
 
 
+def test_restore_ignores_table_markers_inside_protected_inline_code() -> None:
+    """Do not mistake literal pipe operators for a Markdown table."""
+    source = "`||`"
+    protected = protect_markdown(source)
+
+    assert restore_and_validate(source, protected, protected.text) == source  # noqa: S101
+
+
 @pytest.mark.parametrize(("opening", "closing"), [("```markdown", "```"), ("~~~md", "~~~")])
 def test_restore_accepts_one_outer_markdown_fence(opening: str, closing: str) -> None:
     """Discard a provider presentation wrapper before strict validation."""

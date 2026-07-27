@@ -175,7 +175,7 @@ def _structure_signature(markdown: str) -> StructureSignature:
     lists: list[tuple[int, str]] = []
     quotes: list[int] = []
     tables: list[tuple[tuple[int, bool], ...]] = []
-    lines = markdown.splitlines()
+    lines = _INLINE_CODE_RE.sub("", markdown).splitlines()
     fenced_lines = _fenced_line_indexes(markdown)
     index = 0
     while index < len(lines):

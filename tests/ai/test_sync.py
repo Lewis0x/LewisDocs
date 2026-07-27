@@ -538,6 +538,44 @@ def test_initial_sync_translates_all_sources_and_creates_bilingual_trees(
     assert (content / "zh-CN").is_dir()
 
 
+def test_english_preview_upgrades_to_bilingual_content(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manifest_path = ROOT / "source-ai" / "sources.yaml"
+    manifest = load_sources(manifest_path)
+    content = tmp_path / "private"
+    install_content(content, normalized_pages(manifest))
+    RealFileOps().remove(content / "zh-CN", fault=None)
+    translated: list[SourceId] = []
+
+    def translate(client: httpx2.Client, request: TranslationInput) -> str:
+        del client
+        translated.append(request.source_id)
+        return request.markdown
+
+    monkeypatch.setenv("MOONSHOT_API_KEY", "process-only-test-key")
+    result = run_sync(
+        SyncOptions(
+            repo_root=ROOT,
+            content_root=content,
+            staging_root=tmp_path / "stage",
+            manifest_path=manifest_path,
+            report_path=tmp_path / "report.json",
+        ),
+        SyncDeps(
+            client_factory=lambda: create_http_client(transport_for(manifest)),
+            translator=translate,
+            file_ops=RealFileOps(),
+        ),
+    )
+
+    assert result.result == "updated"
+    assert translated == [source.id for source in manifest.root]
+    assert (content / "en").is_dir()
+    assert (content / "zh-CN").is_dir()
+
+
 @pytest.mark.parametrize("fault", ["report:temp-write", "report:replace", "cleanup"])
 def test_noop_report_fault_restores_the_prior_report(
     fault: str,

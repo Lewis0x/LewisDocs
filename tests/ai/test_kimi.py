@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Final, cast
 import httpx2
 import pytest
 from pydantic import SecretStr, ValidationError
+from typing_extensions import override
 
 from scripts.ai.errors import AIAgentError, ErrorCode
 from scripts.ai.http_client import create_http_client
@@ -30,7 +31,7 @@ from scripts.ai.protect import protect_markdown
 from scripts.ai.types import SourceId
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE_ID: Final = SourceId("claude-code/quickstart")
@@ -581,6 +582,11 @@ def test_translate_retries_transient_rate_limit_inside_the_current_chunk() -> No
     attempts = 0
     api_key = SecretStr(secrets.token_urlsafe(48))
 
+    class UnreadBody(httpx2.SyncByteStream):
+        @override
+        def __iter__(self) -> Iterator[bytes]:
+            yield b'{"error":{"message":"We are receiving too many requests"}}'
+
     def handler(request: httpx2.Request) -> httpx2.Response:
         nonlocal attempts
         attempts += 1
@@ -589,7 +595,7 @@ def test_translate_retries_transient_rate_limit_inside_the_current_chunk() -> No
                 status_code=429,
                 request=request,
                 headers={"retry-after": "0"},
-                content=b'{"error":{"message":"We are receiving too many requests"}}',
+                stream=UnreadBody(),
             )
         payload = KimiRequest.model_validate_json(request.content)
         return _json_response(request, payload.messages[1].content)

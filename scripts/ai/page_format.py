@@ -24,7 +24,8 @@ _COMMON_FIELDS: Final = (
 )
 _CHINESE_FIELDS: Final = (*_COMMON_FIELDS, "translation_of", "translation_model", "ai_translated")
 WARNING: Final = "本页由 AI 翻译，可能存在误差；如有歧义，以英文原文为准。"  # noqa: RUF001
-_MODEL: Final = "k3"
+_DEFAULT_MODEL: Final = "k3"
+_TRANSLATION_MODELS: Final = ("k3", "glm-5.2")
 _FRONTMATTER_ERROR: Final = "invalid frontmatter"
 _HASH_RE: Final = re.compile(r"[0-9a-f]{64}\Z")
 _H1_RE: Final = re.compile(r"^#\s+(.+?)\s*$", re.MULTILINE)
@@ -43,7 +44,7 @@ class AcceptedPage(BaseModel):
     owner: Owner
     content_sha256: str
     translation_of: SourceId | None = None
-    translation_model: Literal["k3"] | None = None
+    translation_model: Literal["k3", "glm-5.2"] | None = None
     ai_translated: Literal[True] | None = None
     body: str
 
@@ -82,7 +83,7 @@ class AcceptedPage(BaseModel):
             case "zh-CN":
                 if (
                     self.translation_of is None
-                    or self.translation_model != _MODEL
+                    or self.translation_model not in _TRANSLATION_MODELS
                     or self.ai_translated is not True
                 ):
                     msg = "Chinese pages require fixed translation metadata"
@@ -113,7 +114,12 @@ def render_english_page(normalized: NormalizedPage) -> bytes:
     )
 
 
-def render_chinese_page(normalized: NormalizedPage, translated: str) -> bytes:
+def render_chinese_page(
+    normalized: NormalizedPage,
+    translated: str,
+    *,
+    translation_model: Literal["k3", "glm-5.2"] = _DEFAULT_MODEL,
+) -> bytes:
     """Render one deterministic Chinese accepted page with its fixed warning."""
     source = normalized.source
     translated_lf = _lf(translated)
@@ -134,7 +140,7 @@ def render_chinese_page(normalized: NormalizedPage, translated: str) -> bytes:
             ("owner", source.owner),
             ("content_sha256", normalized.content_sha256),
             ("translation_of", source.id),
-            ("translation_model", _MODEL),
+            ("translation_model", translation_model),
             ("ai_translated", "true"),
         ),
         body,
