@@ -73,12 +73,16 @@ def _call(transport: httpx2.BaseTransport, api_key: SecretStr) -> str:
         return translate_markdown(client, _translation_input(api_key))
 
 
-def _assert_translation_failed(operation: Callable[[], str]) -> None:
+def _assert_translation_failed(
+    operation: Callable[[], str],
+    expected_reason: str | None = None,
+) -> None:
     with pytest.raises(AIAgentError) as exc_info:
         _ = operation()
     assert exc_info.value.code == ErrorCode.TRANSLATION_FAILED  # noqa: S101
     assert exc_info.value.source_id == SOURCE_ID  # noqa: S101
     assert str(exc_info.value) == FAILURE_MESSAGE  # noqa: S101
+    assert getattr(exc_info.value, "reason", None) == expected_reason  # noqa: S101
 
 
 def _authorization(request: httpx2.Request) -> str:
@@ -223,7 +227,10 @@ def test_translate_maps_invalid_responses_to_safe_failure(response_body: bytes) 
             content=response_body,
         )
 
-    _assert_translation_failed(lambda: _call(httpx2.MockTransport(handler), api_key))
+    _assert_translation_failed(
+        lambda: _call(httpx2.MockTransport(handler), api_key),
+        "response_invalid",
+    )
 
 
 def test_translate_maps_http_transport_and_restore_failures() -> None:
@@ -234,12 +241,18 @@ def test_translate_maps_http_transport_and_restore_failures() -> None:
         message = "synthetic network failure"
         raise httpx2.ConnectError(message, request=request)
 
-    _assert_translation_failed(lambda: _call(httpx2.MockTransport(transport_failure), api_key))
+    _assert_translation_failed(
+        lambda: _call(httpx2.MockTransport(transport_failure), api_key),
+        "transport",
+    )
 
     def missing_token(request: httpx2.Request) -> httpx2.Response:
         return _json_response(request, "# 合成手册\n\ntranslated without tokens\n")
 
-    _assert_translation_failed(lambda: _call(httpx2.MockTransport(missing_token), api_key))
+    _assert_translation_failed(
+        lambda: _call(httpx2.MockTransport(missing_token), api_key),
+        "output_invalid",
+    )
 
     def non_success(request: httpx2.Request) -> httpx2.Response:
         return httpx2.Response(
@@ -249,7 +262,41 @@ def test_translate_maps_http_transport_and_restore_failures() -> None:
         )
 
     with create_http_client(httpx2.MockTransport(non_success)) as client:
-        _assert_translation_failed(lambda: translate_markdown(client, _translation_input(api_key)))
+        _assert_translation_failed(
+            lambda: translate_markdown(client, _translation_input(api_key)),
+            "provider_server",
+        )
+
+
+@pytest.mark.parametrize(
+    ("status_code", "expected_reason"),
+    [
+        (400, "provider_request"),
+        (401, "provider_auth"),
+        (403, "provider_permission"),
+        (404, "provider_not_found"),
+        (429, "provider_quota"),
+    ],
+)
+def test_translate_classifies_provider_status_without_exposing_response(
+    status_code: int,
+    expected_reason: str,
+) -> None:
+    """Expose only a fixed failure category for provider HTTP errors."""
+    api_key = SecretStr(secrets.token_urlsafe(48))
+
+    def reject(request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(
+            status_code=status_code,
+            request=request,
+            content=b'{"error":{"message":"unsafe provider detail"}}',
+        )
+
+    with create_http_client(httpx2.MockTransport(reject)) as client:
+        _assert_translation_failed(
+            lambda: translate_markdown(client, _translation_input(api_key)),
+            expected_reason,
+        )
 
 
 def test_runtime_secret_is_absent_from_output_files_and_diff(

@@ -22,6 +22,20 @@ class ErrorCode(StrEnum):
     WRITE_FAILED = "WRITE_FAILED"
 
 
+class TranslationFailureReason(StrEnum):
+    """Secret-safe categories for translation adapter failures."""
+
+    PROVIDER_REQUEST = "provider_request"
+    PROVIDER_AUTH = "provider_auth"
+    PROVIDER_PERMISSION = "provider_permission"
+    PROVIDER_NOT_FOUND = "provider_not_found"
+    PROVIDER_QUOTA = "provider_quota"
+    PROVIDER_SERVER = "provider_server"
+    TRANSPORT = "transport"
+    RESPONSE_INVALID = "response_invalid"
+    OUTPUT_INVALID = "output_invalid"
+
+
 class AIAgentError(Exception):
     """Small typed exception that carries a task code and optional source id."""
 
@@ -30,8 +44,10 @@ class AIAgentError(Exception):
         code: ErrorCode,
         message: str,
         source_id: SourceId | None = None,
+        reason: TranslationFailureReason | None = None,
     ) -> None:
         """Initialize an error with a stable code and optional source identity."""
         super().__init__(message)
         self.code: ErrorCode = code
         self.source_id: SourceId | None = source_id
+        self.reason: TranslationFailureReason | None = reason

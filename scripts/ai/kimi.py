@@ -16,7 +16,7 @@ from pydantic import (
     field_validator,
 )
 
-from scripts.ai.errors import AIAgentError, ErrorCode
+from scripts.ai.errors import AIAgentError, ErrorCode, TranslationFailureReason
 from scripts.ai.protect import protect_markdown, restore_and_validate
 
 if TYPE_CHECKING:
@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 # China-platform keys require the matching regional endpoint.
 # https://platform.kimi.com/docs/api/overview
 _ENDPOINT: Final = "https://api.moonshot.cn/v1/chat/completions"
+_SERVER_ERROR_MIN_STATUS: Final = 500
 _SYSTEM_PROMPT: Final = (
     "你必须只输出中文 Markdown, 并保持原文结构与占位符令牌不变, 不得修改格式、标点或保护段落。"
 )
@@ -92,11 +93,31 @@ class TranslationInput:
     api_key: SecretStr
 
 
-def _raise_translation_failed(source_id: SourceId) -> NoReturn:
+def _raise_translation_failed(
+    source_id: SourceId,
+    reason: TranslationFailureReason,
+) -> NoReturn:
     raise AIAgentError(
         code=ErrorCode.TRANSLATION_FAILED,
         message=_TRANSLATION_FAILED_MESSAGE,
         source_id=source_id,
+        reason=reason,
+    )
+
+
+def _provider_failure_reason(status_code: int) -> TranslationFailureReason:
+    return {
+        401: TranslationFailureReason.PROVIDER_AUTH,
+        403: TranslationFailureReason.PROVIDER_PERMISSION,
+        404: TranslationFailureReason.PROVIDER_NOT_FOUND,
+        429: TranslationFailureReason.PROVIDER_QUOTA,
+    }.get(
+        status_code,
+        (
+            TranslationFailureReason.PROVIDER_SERVER
+            if status_code >= _SERVER_ERROR_MIN_STATUS
+            else TranslationFailureReason.PROVIDER_REQUEST
+        ),
     )
 
 
@@ -125,5 +146,23 @@ def translate_markdown(client: httpx2.Client, request: TranslationInput) -> str:
         _ = response.raise_for_status()
         completion = KimiResponse.model_validate_json(response.content).choices[0].message.content
         return restore_and_validate(request.markdown, protected, completion)
-    except (AIAgentError, httpx2.HTTPError, ValidationError):
-        _raise_translation_failed(request.source_id)
+    except AIAgentError:
+        _raise_translation_failed(
+            request.source_id,
+            TranslationFailureReason.OUTPUT_INVALID,
+        )
+    except httpx2.HTTPStatusError as error:
+        _raise_translation_failed(
+            request.source_id,
+            _provider_failure_reason(error.response.status_code),
+        )
+    except httpx2.HTTPError:
+        _raise_translation_failed(
+            request.source_id,
+            TranslationFailureReason.TRANSPORT,
+        )
+    except ValidationError:
+        _raise_translation_failed(
+            request.source_id,
+            TranslationFailureReason.RESPONSE_INVALID,
+        )
