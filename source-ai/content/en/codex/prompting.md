@@ -5,13 +5,15 @@ product: codex
 lang: en
 canonical_url: https://learn.chatgpt.com/docs/prompting
 owner: OpenAI
-content_sha256: 7dbe05fc5c5f1740e8cabb68d99c966fff79d24167e1ab5d4276c626b93cc557
+content_sha256: 6d4236e02130eff9a4fd8869fd165f5afba09f325b4d74d536654ac7dae09c6b
 ---
 [Official source](https://learn.chatgpt.com/docs/prompting)
 
 Content owner: OpenAI
 
 # Prompting
+
+> For the complete documentation index, see [llms.txt](https://learn.chatgpt.com/llms.txt). Markdown versions of documentation pages are available by appending `.md` to the page URL.
 
 <a id="prompts"></a>
 
@@ -86,12 +88,14 @@ plugins from the same universal directory. Ask for the result you need and let
 the active surface choose from the tools available to it. In ChatGPT, type `@`
 in the composer to choose a specific plugin.
 
-[<IconItem title="Learn about plugins" className="mt-4">
-    <span slot="icon">
+[Learn about plugins
+
+
+
       <Plugin />
-    </span>
-    Find, install, and use plugins in ChatGPT and Codex.
-  </IconItem>](https://learn.chatgpt.com/docs/plugins)
+
+
+    Find, install, and use plugins in ChatGPT and Codex.](https://learn.chatgpt.com/docs/plugins)
 
 ### Personalize ChatGPT
 
@@ -99,12 +103,14 @@ Put preferences that should apply across chats in **Settings > Personalization**
 as custom instructions. Keep details that matter only to the current chat in the
 prompt.
 
-[<IconItem title="Review personalization settings" className="mt-4">
-    <span slot="icon">
+[Review personalization settings
+
+
+
       <Settings />
-    </span>
-    Set a default personality, custom instructions, and other app preferences.
-  </IconItem>](https://learn.chatgpt.com/docs/reference/settings#personalization)
+
+
+    Set a default personality, custom instructions, and other app preferences.](https://learn.chatgpt.com/docs/reference/settings#personalization)
 
 ## Set boundaries that prevent real problems
 
@@ -354,14 +360,14 @@ Use this when you are onboarding, inheriting a service, or trying to reason abou
 2. Select the code you care about (optional but recommended).
 3. Prompt Codex:
 
-   ```text
+```text
    Explain how the request flows through the selected code.
 
    Include:
    - a short summary of the responsibilities of each module involved
    - what data is validated and where
    - one or two "gotchas" to watch for when changing this
-   ```
+```
 
 </WorkflowSteps>
 
@@ -379,15 +385,15 @@ Summarize the request flow as a numbered list of steps. Then list the files invo
 
 1. Start an interactive session:
 
-   ```bash
+```bash
    codex
-   ```
+```
 
 2. Attach the files (optional) and prompt:
 
-   ```text
+```text
    I need to understand the protocol used by this service. Read @foo.ts @schema.ts and explain the schema and request/response flow. Focus on required vs optional fields and backward compatibility rules.
-   ```
+```
 
 </WorkflowSteps>
 
@@ -405,13 +411,13 @@ Use this when you have a failing behavior you can reproduce locally.
 
 1. Start Codex at the repo root:
 
-   ```bash
+```bash
    codex
-   ```
+```
 
 2. Give Codex a reproduction recipe, plus the file(s) you suspect:
 
-   ```text
+```text
    Bug: Clicking "Save" on the settings screen sometimes shows "Saved" but doesn't persist the change.
 
    Repro:
@@ -426,7 +432,7 @@ Use this when you have a failing behavior you can reproduce locally.
    - Keep the fix minimal and add a regression test if feasible.
 
    Start by reproducing the bug locally, then propose a patch and run checks.
-   ```
+```
 
 </WorkflowSteps>
 
@@ -451,9 +457,9 @@ After the fix, run lint + the smallest relevant test suite. Report the commands 
 1. Open the file where you think the bug lives, plus its nearest caller.
 2. Prompt Codex:
 
-   ```text
+```text
    Find the bug causing "Saved" to show without persisting changes. After proposing the fix, tell me how to verify it in the UI.
-   ```
+```
 
 </WorkflowSteps>
 
@@ -469,9 +475,9 @@ Use this when you want to define the exact scope to test.
 2. Select the lines that define the function. Choose "Add to Codex Thread" from command palette to add these lines to the context.
 3. Prompt Codex:
 
-   ```text
+```text
    Write a unit test for this function. Follow conventions used in other tests.
-   ```
+```
 
 </WorkflowSteps>
 
@@ -485,15 +491,15 @@ Context notes:
 
 1. Start Codex:
 
-   ```bash
+```bash
    codex
-   ```
+```
 
 2. Prompt with a function name:
 
-   ```text
+```text
    Add a test for the invert_list function in @transform.ts. Cover the happy path plus edge cases.
-   ```
+```
 
 </WorkflowSteps>
 
@@ -508,15 +514,15 @@ Use this when you want to turn a design mock, screenshot, or UI reference into a
 1. Save your screenshot locally (for example `./specs/ui.png`).
 2. Run Codex:
 
-   ```bash
+```bash
    codex
-   ```
+```
 
 3. Drag the image file into the terminal to attach it to the prompt.
 
 4. Follow up with constraints and structure:
 
-   ```text
+```text
    Create a new dashboard based on this image.
 
    Constraints:
@@ -527,7 +533,7 @@ Use this when you want to turn a design mock, screenshot, or UI reference into a
    - A new route/page that renders the UI
    - Any small components needed
    - README.md with instructions to run it locally
-   ```
+```
 
 </WorkflowSteps>
 
@@ -551,10 +557,10 @@ Start the dev server and tell me the local URL/route to view the prototype.
 1. Attach the image in the Codex chat (drag-and-drop or paste).
 2. Prompt Codex:
 
-   ```text
+```text
    Create a new settings page. Use the attached screenshot as the target UI.
    Follow design and visual patterns from other files in this project.
-   ```
+```
 
 </WorkflowSteps>
 
@@ -568,39 +574,39 @@ Use this when you want a tight "design → tweak → refresh → tweak" loop whi
 
 1. Start Codex:
 
-   ```bash
+```bash
    codex
-   ```
+```
 
 2. Start the dev server in a separate terminal window:
 
-   ```bash
+```bash
    npm run dev
-   ```
+```
 
 3. Prompt Codex to make changes:
 
-   ```text
+```text
    Propose 2-3 styling improvements for the landing page.
-   ```
+```
 
 4. Pick a direction and iterate with small, specific prompts:
 
-   ```text
+```text
    Go with option 2.
 
    Change only the header:
    - make the typography more editorial
    - increase whitespace
    - ensure it still looks good on mobile
-   ```
+```
 
 5. Repeat with focused requests:
 
-   ```text
+```text
    Next iteration: reduce visual noise.
    Keep the layout, but simplify colors and remove any redundant borders.
-   ```
+```
 
 </WorkflowSteps>
 
@@ -621,7 +627,7 @@ Use this when you want to design an approach with local context, then delegate t
 1. Make sure your current work is committed or at least stashed so you can compare changes cleanly.
 2. Ask Codex to produce a refactor plan. If you have the `$plan` skill available, invoke it explicitly:
 
-   ```text
+```text
    $plan
 
    We need to refactor the auth subsystem to:
@@ -633,15 +639,15 @@ Use this when you want to design an approach with local context, then delegate t
    - No user-visible behavior changes
    - Keep public APIs stable
    - Include a step-by-step migration plan
-   ```
+```
 
 3. Review the plan and negotiate changes:
 
-   ```text
+```text
    Revise the plan to:
    - specify exactly which files move in each milestone
    - include a rollback strategy
-   ```
+```
 
 </WorkflowSteps>
 
@@ -657,9 +663,9 @@ Context notes:
 2. Click on the cloud icon beneath the prompt composer and select your cloud environment.
 3. When you enter the next prompt, Codex creates a new chat in the cloud that carries over the existing chat context (including the plan and any local source changes).
 
-   ```text
+```text
    Implement Milestone 1 from the plan.
-   ```
+```
 
 4. Review the cloud diff, iterate if needed.
 
@@ -683,21 +689,21 @@ Use this when you want a second set of eyes before committing or creating a PR.
 
 1. Start Codex:
 
-   ```bash
+```bash
    codex
-   ```
+```
 
 2. Run the review command:
 
-   ```text
+```text
    /review
-   ```
+```
 
 3. Optional: provide custom focus instructions:
 
-   ```text
+```text
    /review Focus on edge cases and security issues
-   ```
+```
 
 </WorkflowSteps>
 
@@ -718,15 +724,15 @@ Before you can use this, enable Codex **Code review** on your repository. See [C
 1. Open the pull request on GitHub.
 2. Leave a comment that tags Codex with explicit focus areas:
 
-   ```text
+```text
    @codex review
-   ```
+```
 
 3. Optional: Provide more explicit instructions.
 
-   ```text
+```text
    @codex review for security vulnerabilities and security concerns
-   ```
+```
 
 </WorkflowSteps>
 
@@ -741,9 +747,9 @@ Use this when you need an accurate, clear documentation change.
 1. Identify the doc file(s) to change and open them (IDE) or `@` mention them (IDE or CLI).
 2. Prompt Codex with scope and validation requirements:
 
-   ```text
+```text
    Update the "advanced features" documentation to provide authentication troubleshooting guidance. Verify that all links are valid.
-   ```
+```
 
 3. After Codex drafts the changes, review the documentation and iterate as needed.
 

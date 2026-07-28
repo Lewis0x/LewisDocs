@@ -30,9 +30,9 @@ _VOID_TAGS: Final = frozenset(
 )
 
 
-def normalize_html_content(raw: str) -> str:
+def normalize_html_content(raw: str, *, allow_main: bool = False) -> str:
     """Parse an article and render it as canonical markdown."""
-    parser = _ArticleParser()
+    parser = _ArticleParser(allow_main=allow_main)
     parser.feed(raw)
     parser.close()
     if parser.article is None:
@@ -77,12 +77,9 @@ def _render_article(article: _Node) -> str:
 def _render_block(node: _Node, *, list_depth: int) -> str:  # noqa: PLR0911
     if node.tag is None:
         return node.text
-    if node.tag == "h1":
+    if node.tag in {"h1", "h2", "h3", "h4", "h5", "h6"}:
         heading = _render_inline(node.children).strip()
-        return f"# {heading}" if heading else ""
-    if node.tag == "h2":
-        heading = _render_inline(node.children).strip()
-        return f"## {heading}" if heading else ""
+        return f"{'#' * int(node.tag[1])} {heading}" if heading else ""
     if node.tag == "p":
         return _render_inline(node.children)
     if node.tag in {"ul", "ol"}:
@@ -214,9 +211,10 @@ class _Node:
 
 
 class _ArticleParser(HTMLParser):
-    def __init__(self) -> None:
+    def __init__(self, *, allow_main: bool) -> None:
         super().__init__(convert_charrefs=True)
         self.article: _Node | None = None
+        self._allow_main = allow_main
         self._stack: list[_Node] = []
         self._main_content_count: int = 0
         self._ignore_depth: int = 0
@@ -228,11 +226,13 @@ class _ArticleParser(HTMLParser):
     @override
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         attributes = {name: value for name, value in attrs if value is not None}
-        if tag == "article" and attributes.get("id") == "mainContent":
+        is_article = tag == "article" and attributes.get("id") == "mainContent"
+        is_main_fallback = tag == "main" and self._allow_main and self.article is None
+        if is_article or is_main_fallback:
             self._main_content_count += 1
             if self._main_content_count != 1:
                 raise ValueError(_NORMALIZATION_ERROR)
-            self.article = _Node(tag="article", attrs=attributes)
+            self.article = _Node(tag=tag, attrs=attributes)
             self._stack.append(self.article)
             return
         if not self._in_article:
@@ -257,11 +257,16 @@ class _ArticleParser(HTMLParser):
             if tag in {"script", "style"}:
                 self._ignore_depth -= 1
             return
-        if not self._stack:
-            raise ValueError(_NORMALIZATION_ERROR)
-        current = self._stack.pop()
-        if current.tag != tag:
-            raise ValueError(_NORMALIZATION_ERROR)
+        matching = next(
+            (
+                index
+                for index in range(len(self._stack) - 1, -1, -1)
+                if self._stack[index].tag == tag
+            ),
+            None,
+        )
+        if matching is not None:
+            del self._stack[matching:]
 
     @override
     def handle_data(self, data: str) -> None:

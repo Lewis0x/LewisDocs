@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import re
 from hashlib import sha256
+from os import scandir
+from pathlib import Path
 from typing import TYPE_CHECKING, Final, NoReturn
 
 from pydantic import ValidationError
@@ -14,8 +16,6 @@ from scripts.ai.errors import AIAgentError, ErrorCode
 from scripts.ai.page_format import WARNING, AcceptedPage, first_h1, parse_accepted_page
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from scripts.ai.types import Source, SourceId, SourceManifest
 
 _MARKDOWN_LINK_RE: Final = re.compile(r"\]\(([^)\s]+)\)")
@@ -67,26 +67,14 @@ def validate_english_candidate(
         _require_directory(managed_root)
         if {path.name for path in managed_root.iterdir()} != {"en", "learn"}:
             _fail()
-        english_root = managed_root / "en"
-        _require_directory(english_root)
-        if {path.name for path in english_root.iterdir()} != {"claude-code", "codex"}:
-            _fail()
-        pages: dict[SourceId, AcceptedPage] = {}
+        pages = _parse_language(
+            managed_root / "en",
+            manifest,
+            language="en",
+            exact=True,
+        )
         for source in manifest.root:
-            product_root = english_root / source.product
-            _require_directory(product_root)
-            expected = {
-                item.slug + ".md" for item in manifest.root if item.product == source.product
-            }
-            if {path.name for path in product_root.iterdir()} != expected:
-                _fail(source.id)
-            page_path = product_root / f"{source.slug}.md"
-            _require_regular_file(page_path, source.id)
-            page = parse_accepted_page(page_path)
-            if page.source_id != source.id or page.source_id in pages:
-                _fail(source.id)
-            pages[page.source_id] = page
-            _validate_english(source, page)
+            _validate_english(source, pages[source.id])
         if len(pages) != len(manifest.root):
             _fail()
     except AIAgentError:
@@ -176,8 +164,16 @@ def _parse_language(
             for source in manifest.root
             if source.product == product
         }
-        entries = {path.name: path for path in product_root.iterdir()}
+        entries, directories = _regular_tree(product_root)
         if (exact and entries.keys() != sources.keys()) or not entries.keys() <= sources.keys():
+            _fail()
+        expected_directories = {
+            parent.as_posix()
+            for name in entries
+            for parent in Path(name).parents
+            if parent != Path()
+        }
+        if directories != expected_directories:
             _fail()
         for name, path in entries.items():
             source = sources[name]
@@ -191,6 +187,29 @@ def _parse_language(
                 _fail(source.id)
             pages[page.source_id] = page
     return pages
+
+
+def _regular_tree(root: Path) -> tuple[dict[str, Path], set[str]]:
+    files: dict[str, Path] = {}
+    directories: set[str] = set()
+
+    def visit(directory: Path) -> None:
+        with scandir(directory) as entries:
+            for entry in entries:
+                path = Path(entry.path)
+                relative = path.relative_to(root).as_posix()
+                if entry.is_symlink():
+                    _fail()
+                if entry.is_dir(follow_symlinks=False):
+                    directories.add(relative)
+                    visit(path)
+                elif entry.is_file(follow_symlinks=False):
+                    files[relative] = path
+                else:
+                    _fail()
+
+    visit(root)
+    return files, directories
 
 
 def _validate_pair(source: Source, english: AcceptedPage, chinese: AcceptedPage) -> None:
@@ -254,13 +273,18 @@ def _validate_learning(
         path = language_root / f"{product}.md"
         _require_regular_file(path)
         links = tuple(_MARKDOWN_LINK_RE.findall(path.read_text(encoding="utf-8")))
-        expected = tuple(
+        allowed = tuple(
             f"/ai/zh-CN/{source.product}/{source.slug}"
             for source in manifest.root
             if source.product == product
             and (translated is None or source.id in translated)
         )
-        if links != expected:
+        if (
+            not links
+            or len(set(links)) != len(links)
+            or any(link not in allowed for link in links)
+            or tuple(sorted(links, key=allowed.index)) != links
+        ):
             _fail()
 
 

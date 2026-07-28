@@ -5,13 +5,15 @@ product: codex
 lang: en
 canonical_url: https://developers.openai.com/codex/github-action
 owner: OpenAI
-content_sha256: c7e4ac20c7ea626ddeabb3d43d7e30ce9e53cc2ba810dcc2816c996b9d1edfeb
+content_sha256: 42b0c3ac45fa265d54b64f621883d0ecb5b41bcca29306ae40d871e332bb5157
 ---
 [Official source](https://developers.openai.com/codex/github-action)
 
 Content owner: OpenAI
 
 # Codex GitHub Action
+
+> For the complete documentation index, see [llms.txt](https://learn.chatgpt.com/llms.txt). Markdown versions of documentation pages are available by appending `.md` to the page URL.
 
 Use the Codex GitHub Action (`openai/codex-action@v1`) to run Codex in CI/CD jobs, apply patches, or post reviews from a GitHub Actions workflow.
 The action installs the Codex CLI, starts the Responses API proxy when you provide an API key, and runs `codex exec` under the permissions you specify.

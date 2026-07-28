@@ -15,11 +15,13 @@ from pydantic import ValidationError
 
 from scripts.ai.errors import AIAgentError, ErrorCode
 from scripts.ai.manifest import load_sources
+from scripts.ai.source_index import generate_manifest
 from scripts.ai.types import FetchedPage, SourceId, SourceManifest
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCES_FILE = ROOT / "source-ai" / "sources.yaml"
-MANIFEST_SIZE = 20
+INDEX_ROOT = ROOT / "source-ai" / "indexes"
+MANIFEST_SIZE = 303
 
 ManifestRow = dict[str, str]
 Mutation = Callable[[list[ManifestRow]], None]
@@ -101,12 +103,9 @@ def _mutate_http_fetch_url(rows: list[ManifestRow]) -> None:
     rows[0]["fetch_url"] = "http://code.claude.com/docs/en/quickstart.md"
 
 
-def _mutate_changed_frozen_row(rows: list[ManifestRow]) -> None:
-    rows[0]["title"] = "Modified title"
-
-
-def _mutate_wrong_fetch_format(rows: list[ManifestRow]) -> None:
-    rows[0]["fetch_format"] = "html"
+def _mutate_unsafe_slug(rows: list[ManifestRow]) -> None:
+    rows[0]["slug"] = "../quickstart"
+    rows[0]["id"] = "claude-code/../quickstart"
 
 
 def _mutate_count_9(rows: list[ManifestRow]) -> None:
@@ -144,8 +143,7 @@ MUTATIONS: list[tuple[str, Mutation]] = [
     ("duplicate_product_slug", _mutate_duplicate_product_slug),
     ("http_canonical_url", _mutate_http_canonical_url),
     ("http_fetch_url", _mutate_http_fetch_url),
-    ("changed_frozen_row", _mutate_changed_frozen_row),
-    ("wrong_fetch_format", _mutate_wrong_fetch_format),
+    ("unsafe_slug", _mutate_unsafe_slug),
     ("count_9", _mutate_count_9),
     ("count_11", _mutate_count_11),
     ("split_4_6", _mutate_split_4_6),
@@ -186,3 +184,16 @@ def test_fetched_page_preserves_text_boundaries() -> None:
             text=" \r\n  \t  ",
         )
     assert "non-whitespace" in str(exc_info.value)  # noqa: S101
+
+
+def test_committed_manifest_is_generated_from_official_index_snapshots() -> None:
+    """Keep every committed row tied to the complete official index snapshots."""
+    rows = _base_rows()
+    generated = generate_manifest(
+        {
+            "claude-code": (INDEX_ROOT / "claude-code.txt").read_text(encoding="utf-8"),
+            "codex": (INDEX_ROOT / "codex.txt").read_text(encoding="utf-8"),
+        },
+        cast("tuple[ManifestRow, ...]", tuple(rows)),
+    )
+    assert list(generated) == rows  # noqa: S101

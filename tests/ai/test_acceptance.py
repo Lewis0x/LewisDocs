@@ -32,28 +32,7 @@ if TYPE_CHECKING:
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = ROOT / "source-ai" / "sources.yaml"
 QUERY_PATH = ROOT / "tests" / "ai" / "fixtures" / "browser-queries.json"
-SOURCE_IDS = (
-    "claude-code/quickstart",
-    "claude-code/memory",
-    "claude-code/permissions",
-    "claude-code/extensions",
-    "claude-code/best-practices",
-    "claude-code/how-it-works",
-    "claude-code/common-workflows",
-    "claude-code/hooks-guide",
-    "claude-code/mcp",
-    "claude-code/subagents",
-    "codex/cli",
-    "codex/prompting",
-    "codex/agents-md",
-    "codex/approvals-security",
-    "codex/customization",
-    "codex/best-practices",
-    "codex/ide",
-    "codex/cloud",
-    "codex/mcp",
-    "codex/github-action",
-)
+SOURCE_IDS = tuple(str(source.id) for source in load_sources(MANIFEST_PATH).root)
 ROUTES = frozenset(
     f"/ai/{language}/{source_id}" for source_id in SOURCE_IDS for language in ("en", "zh-CN")
 ) | frozenset(("/ai/zh-CN/learn/claude-code", "/ai/zh-CN/learn/codex"))

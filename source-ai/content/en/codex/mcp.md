@@ -5,13 +5,15 @@ product: codex
 lang: en
 canonical_url: https://developers.openai.com/codex/extend/mcp
 owner: OpenAI
-content_sha256: 09d64df2d691d3f4f8262a78961a7f21e24957426c610ba441a32b343ff23f6f
+content_sha256: 951a8e4c5f7d05fde7d91a4956ead922327d35fb65a710bb0f65bc5c84ef00c3
 ---
 [Official source](https://developers.openai.com/codex/extend/mcp)
 
 Content owner: OpenAI
 
 # Model Context Protocol
+
+> For the complete documentation index, see [llms.txt](https://learn.chatgpt.com/llms.txt). Markdown versions of documentation pages are available by appending `.md` to the page URL.
 
 Model Context Protocol (MCP) connects models to tools and context. Use it to
 give ChatGPT or Codex access to third-party documentation, or to let it

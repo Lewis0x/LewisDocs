@@ -34,6 +34,15 @@ def _run_sync() -> int:
     return command.main()
 
 
+def _run_english_sync() -> int:
+    """Dispatch to the complete English synchronization command."""
+    command = importlib.import_module("scripts.ai.sync_english")
+    if not isinstance(command, SyncCommand):
+        message = "scripts.ai.sync_english main() contract is missing"
+        raise TypeError(message)
+    return command.main()
+
+
 def _load_sync_module() -> ModuleType:
     return importlib.import_module("scripts.ai.sync")
 
@@ -47,6 +56,12 @@ def root() -> None:
 def sync() -> None:
     """Synchronize AI handbook content."""
     raise typer.Exit(code=_run_sync())
+
+
+@app.command(name="sync-english", help="Synchronize the complete English handbook")
+def sync_english() -> None:
+    """Synchronize all English sources without invoking a translator."""
+    raise typer.Exit(code=_run_english_sync())
 
 
 def main() -> None:

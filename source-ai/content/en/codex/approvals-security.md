@@ -5,13 +5,15 @@ product: codex
 lang: en
 canonical_url: https://learn.chatgpt.com/docs/agent-approvals-security
 owner: OpenAI
-content_sha256: ea4db7849c1853d49ca88ffc23ab4b066c66326b8a4a57b48c0e560aea245a79
+content_sha256: 8dd07e2e6edd39ff0fd4aadbfe9befa5762a8ed573bc0d8f6b3e49c66d67cf13
 ---
 [Official source](https://learn.chatgpt.com/docs/agent-approvals-security)
 
 Content owner: OpenAI
 
 # Agent approvals & security
+
+> For the complete documentation index, see [llms.txt](https://learn.chatgpt.com/llms.txt). Markdown versions of documentation pages are available by appending `.md` to the page URL.
 
 Codex helps protect your code and data and reduces the risk of misuse.
 

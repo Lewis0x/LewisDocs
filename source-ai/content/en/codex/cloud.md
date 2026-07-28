@@ -5,7 +5,7 @@ product: codex
 lang: en
 canonical_url: https://developers.openai.com/codex/cloud
 owner: OpenAI
-content_sha256: ab3267843a1c7b0565eeaa04ed4dac05a01d9212fbfc5a6964388f5b65d89288
+content_sha256: 4972959466b67651aa58caa9b643d555ce2226187f9b4748a5f113380327068e
 ---
 [Official source](https://developers.openai.com/codex/cloud)
 
@@ -77,7 +77,7 @@ Give each task the environment it needs, then review the result on your schedule
 
 01
 
-Delegate several tasks
+### Delegate several tasks
 
 Start work in parallel and return as each task reaches a reviewable result.
 
@@ -89,7 +89,7 @@ ChatsCode reviewsSecurity reviewsArchiveLast 7 daysFix broken link in documentat
 
 02
 
-Build a reproducible environment
+### Build a reproducible environment
 
 Configure the dependencies, tools, variables, and setup steps a repository needs.
 
@@ -101,7 +101,7 @@ EnvironmentsSearch environmentsCreate environmentNameRepoNumber of chatsSharingC
 
 03
 
-Delegate from your integrations
+### Delegate from your integrations
 
 Start work in Codex cloud from GitHub pull requests, Linear issues, or Slack channels and threads.
 
@@ -111,22 +111,21 @@ Learn more
 
 GitHubPull requests and issuesLinearIssues and commentsSlackChannels and threads
 
-Use Codex cloud when…
+## Use Codex cloud when…
 
-
-Work needs to run in the background
+### Work needs to run in the background
 
 Delegate a longer task and return when it is ready.
 
-You want to compare several attempts
+### You want to compare several attempts
 
 Run tasks in parallel without tying up your local machine.
 
-Work starts in GitHub, Linear, or Slack
+### Work starts in GitHub, Linear, or Slack
 
 Use integrations to hand off work without leaving the pull request, issue, channel, or thread.
 
-You are away from your development machine
+### You are away from your development machine
 
 Start and review work from the web or Codex CLI.
 

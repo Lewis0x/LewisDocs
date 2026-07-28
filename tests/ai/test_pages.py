@@ -302,7 +302,7 @@ def test_validate_candidate_rejects_managed_pair_and_tree_violations(
         case "extra":
             _ = (managed_root / "unexpected.txt").write_text("x\n", encoding="utf-8")
         case "misrouted":
-            destination = managed_root / "en" / "codex" / f"{source.slug}.md"
+            destination = managed_root / "en" / "codex" / f"misrouted-{source.slug}.md"
             _ = target.rename(destination)
         case "duplicate_metadata":
             other = MANIFEST.root[1]
@@ -326,7 +326,10 @@ def test_validate_candidate_rejects_learning_links_and_nonregular_entry(tmp_path
     """Given wrong learning links or a nonregular root entry, reject the supplied live root."""
     managed_root, learning_root = _complete_roots(tmp_path)
     path = learning_root / "zh-CN" / "codex.md"
-    _ = path.write_text("# 学习路径\n\n- [页面](/ai/zh-CN/codex/cli)\n", encoding="utf-8")
+    _ = path.write_text(
+        "# 学习路径\n\n- [页面](/ai/zh-CN/codex/not-a-source)\n",
+        encoding="utf-8",
+    )
     _expect_invalid(managed_root, learning_root)
 
 

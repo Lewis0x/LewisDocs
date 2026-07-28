@@ -83,7 +83,7 @@ def transport_for(manifest: SourceManifest, changed_id: str | None = None) -> ht
     def handler(request: httpx2.Request) -> httpx2.Response:
         source = by_url[str(request.url)]
         markdown = response_markdown(source.id, source.id == changed_id)
-        if source.fetch_format == "html":
+        if source.fetch_format != "markdown":
             content = f'<article id="mainContent"><h1>Synthetic {source.id}</h1><p>Synthetic source{" changed" if source.id == changed_id else ""}.</p></article>'
             content_type = "text/html"
         else:

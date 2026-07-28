@@ -5,7 +5,7 @@ product: codex
 lang: en
 canonical_url: https://learn.chatgpt.com/docs/codex/cli
 owner: OpenAI
-content_sha256: 9895e4936d78754402c57247657cd2c46752bde97d694b9c6c95ff7c15429d58
+content_sha256: 28964d265ccf223323f515d5822420cada253435ea4555ec34f197e92e68184d
 ---
 [Official source](https://learn.chatgpt.com/docs/codex/cli)
 
@@ -100,7 +100,7 @@ Use one focused terminal loop for interactive work, automation, review, and dele
 
 01
 
-Keep the coding loop in your terminal
+### Keep the coding loop in your terminal
 
 Start Codex in a repository to explore unfamiliar code, plan a change, edit files, and run your local development tools. Steer the active turn, inspect commands and diffs as they appear, and keep follow-up work in the same session.
 
@@ -112,7 +112,7 @@ Learn more
 
 02
 
-Use skills and plugins
+### Use skills and plugins
 
 Package repeatable instructions as skills, then add plugins to connect Codex to your team's tools and data without leaving the CLI.
 
@@ -124,7 +124,7 @@ zsh — pluginsPluginsBrowse plugins from available marketplaces.Installed 17 of
 
 03
 
-Review changes before they ship
+### Review changes before they ship
 
 Run a dedicated review against uncommitted changes, a commit, or a base branch. Codex reports prioritized findings without modifying your working tree, so you can address risks before you commit or open a pull request.
 
@@ -134,8 +134,7 @@ Learn more
 
 Select a review preset›1.Review against a base branch(PR Style)2.Review uncommitted changes3.Review a commit4.Custom review instructions
 
-Build a terminal workflow around Codex
-
+## Build a terminal workflow around Codex
 
 
 Learn about the CLI features you can use to resume sessions, add visual
@@ -159,22 +158,21 @@ Learn about the CLI features you can use to resume sessions, add visual
 
  08 ` codex completion ` Fit Codex to your terminal  Generate completions for your shell, choose a syntax theme, and open longer prompts in the editor configured by VISUAL or EDITOR. 
 
-Use Codex CLI when…
+## Use Codex CLI when…
 
-
-You work from the terminal
+### You work from the terminal
 
 Explore, edit, and run a repository in one focused loop.
 
-You need scripting or CI
+### You need scripting or CI
 
 Run a non-interactive command in a repeatable workflow.
 
-You want a local code review
+### You want a local code review
 
 Inspect changes before you commit or open a pull request.
 
-You want to hand work to the cloud
+### You want to hand work to the cloud
 
 Launch a cloud chat and return to the terminal later.
 

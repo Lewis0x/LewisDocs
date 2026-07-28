@@ -1,29 +1,17 @@
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { withMermaid } from 'vitepress-plugin-mermaid'
 import { createSearchRenderer } from './search-render.mjs'
 
-const AI_SOURCES = [
-  { product: 'claude-code', slug: 'quickstart', title: 'Claude Code Quickstart' },
-  { product: 'claude-code', slug: 'memory', title: 'Claude Code Memory' },
-  { product: 'claude-code', slug: 'permissions', title: 'Claude Code Permissions' },
-  { product: 'claude-code', slug: 'extensions', title: 'Claude Code Features Overview' },
-  { product: 'claude-code', slug: 'best-practices', title: 'Claude Code Best Practices' },
-  { product: 'claude-code', slug: 'how-it-works', title: 'How Claude Code Works' },
-  { product: 'claude-code', slug: 'common-workflows', title: 'Claude Code Common Workflows' },
-  { product: 'claude-code', slug: 'hooks-guide', title: 'Automate Actions with Claude Code Hooks' },
-  { product: 'claude-code', slug: 'mcp', title: 'Connect Claude Code to Tools via MCP' },
-  { product: 'claude-code', slug: 'subagents', title: 'Create Custom Claude Code Subagents' },
-  { product: 'codex', slug: 'cli', title: 'Codex CLI' },
-  { product: 'codex', slug: 'prompting', title: 'Codex Prompting' },
-  { product: 'codex', slug: 'agents-md', title: 'Codex AGENTS.md' },
-  { product: 'codex', slug: 'approvals-security', title: 'Codex Agent Approvals and Security' },
-  { product: 'codex', slug: 'customization', title: 'Codex Customization Overview' },
-  { product: 'codex', slug: 'best-practices', title: 'Codex Best Practices' },
-  { product: 'codex', slug: 'ide', title: 'Codex IDE Extension' },
-  { product: 'codex', slug: 'cloud', title: 'Codex Cloud' },
-  { product: 'codex', slug: 'mcp', title: 'Codex Model Context Protocol' },
-  { product: 'codex', slug: 'github-action', title: 'Codex GitHub Action' },
-].map((source) => ({
+type AiSource = {
+  product: 'claude-code' | 'codex'
+  slug: string
+  title: string
+  section: string
+}
+
+const AI_SOURCES = (JSON.parse(
+  readFileSync(new URL('../../source-ai/sources.yaml', import.meta.url), 'utf8'),
+) as AiSource[]).map((source) => ({
   ...source,
   translated: existsSync(
     new URL(
@@ -34,6 +22,63 @@ const AI_SOURCES = [
 }))
 
 const HAS_AI_TRANSLATIONS = AI_SOURCES.some((source) => source.translated)
+
+const aiSection = (source: AiSource) => {
+  if (source.product === 'codex') return source.section
+  const topic = source.slug.split('/')[0] ?? source.slug
+  return source.slug.includes('/')
+    ? topic
+        .split('-')
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ')
+    : 'Claude Code'
+}
+
+const aiLanguageItems = (language: 'en' | 'zh-CN') =>
+  (['claude-code', 'codex'] as const).map((product) => {
+    const productSources = AI_SOURCES.filter(
+      (source) =>
+        source.product === product && (language === 'en' || source.translated),
+    )
+    const sections = [...new Set(productSources.map(aiSection))]
+    return {
+      text: product === 'claude-code' ? 'Claude Code' : 'Codex',
+      collapsed: true,
+      items: sections.map((section) => ({
+        text: section,
+        collapsed: true,
+        items: productSources
+          .filter((source) => aiSection(source) === section)
+          .map((source) => ({
+            text: source.title,
+            link: `/ai/${language}/${source.product}/${source.slug}`,
+          })),
+      })),
+    }
+  })
+
+const AI_SIDEBAR = [
+  ...(HAS_AI_TRANSLATIONS
+    ? [
+        { text: 'Claude Code 学习路径', link: '/ai/zh-CN/learn/claude-code' },
+        { text: 'Codex 学习路径', link: '/ai/zh-CN/learn/codex' },
+      ]
+    : []),
+  {
+    text: 'English',
+    collapsed: true,
+    items: aiLanguageItems('en'),
+  },
+  ...(HAS_AI_TRANSLATIONS
+    ? [
+        {
+          text: '中文',
+          collapsed: true,
+          items: aiLanguageItems('zh-CN'),
+        },
+      ]
+    : []),
+]
 
 const renderAiSearch = createSearchRenderer(true)
 
@@ -176,25 +221,7 @@ export default withMermaid({
       {
         text: 'AI 双语手册',
         collapsed: false,
-        items: [
-          ...(HAS_AI_TRANSLATIONS
-            ? [
-                { text: 'Claude Code 学习路径', link: '/ai/zh-CN/learn/claude-code' },
-                { text: 'Codex 学习路径', link: '/ai/zh-CN/learn/codex' },
-              ]
-            : []),
-          ...AI_SOURCES.flatMap((source) => {
-            const english = {
-              text: `EN · ${source.title}`,
-              link: `/ai/en/${source.product}/${source.slug}`,
-            }
-            const chinese = {
-              text: `中文 · ${source.title}`,
-              link: `/ai/zh-CN/${source.product}/${source.slug}`,
-            }
-            return source.translated ? [english, chinese] : [english]
-          }),
-        ],
+        items: AI_SIDEBAR,
       },
     ],
 
