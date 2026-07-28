@@ -80,6 +80,52 @@ const AI_SIDEBAR = [
     : []),
 ]
 
+const AI_DOC_SIDEBAR = [
+  {
+    text: 'AI 教程及文档',
+    items: [{ text: '首页', link: '/' }],
+  },
+  {
+    text: '官方文档',
+    collapsed: false,
+    items: AI_SIDEBAR,
+  },
+]
+
+const CAD_SIDEBAR = [
+  {
+    text: '附录：CAD API 设计哲学',
+    items: [
+      { text: '总目录与导读', link: '/appendix/cad' },
+      { text: '理论框架（顶层）', link: '/theory' },
+      { text: '横向对比（全景矩阵）', link: '/comparison' },
+    ],
+  },
+  {
+    text: '横向研究',
+    items: [{ text: 'UI 框架研究', link: '/ui-frameworks' }],
+  },
+  {
+    text: '厂商深度剖析',
+    collapsed: false,
+    items: [
+      { text: '3.1 AutoCAD ObjectARX', link: '/platforms/autocad' },
+      { text: '3.2 CATIA CAA RADE', link: '/platforms/catia' },
+      { text: '3.3 Siemens NX (NX Open)', link: '/platforms/nx' },
+      { text: '3.4 Onshape (REST + FeatureScript)', link: '/platforms/onshape' },
+      { text: '3.5 MicroStation + iTwin', link: '/platforms/microstation' },
+      { text: '3.6 SolidWorks', link: '/platforms/solidworks' },
+      { text: '3.7 SketchUp Ruby', link: '/platforms/sketchup' },
+      { text: '3.8 FreeCAD', link: '/platforms/freecad' },
+      { text: '3.9 BricsCAD (BRX + Qt/QML)', link: '/platforms/bricscad' },
+    ],
+  },
+  {
+    text: '工具',
+    items: [{ text: '术语表（Glossary）', link: '/glossary' }],
+  },
+]
+
 const renderAiSearch = createSearchRenderer(true)
 
 // 中文分词器：使用浏览器原生 Intl.Segmenter
@@ -103,8 +149,8 @@ const chineseTokenize = (text: string) => {
 }
 
 export default withMermaid({
-  title: '通用 CAD 平台 API 设计哲学',
-  description: '9 个主流 CAD 平台的 API 设计深度剖析、横向对比、理论框架',
+  title: 'LewisDocs AI 教程及文档',
+  description: 'Claude Code 与 OpenAI Codex 官方教程、参考文档和中文学习路径',
   lang: 'zh-CN',
   // 部署目标：Cloudflare Pages，根路径 → base = '/'
   // 如回退到 GH Pages 子路径 https://lewis0x.github.io/LewisDocs/，改回 '/LewisDocs/'
@@ -161,69 +207,43 @@ export default withMermaid({
   themeConfig: {
     nav: [
       { text: '首页', link: '/' },
-      { text: '理论框架', link: '/theory' },
-      { text: '横向对比', link: '/comparison' },
-      { text: 'UI 框架', link: '/ui-frameworks' },
       {
-        text: '厂商深度',
+        text: 'Claude Code',
         items: [
-          { text: 'AutoCAD ObjectARX', link: '/platforms/autocad' },
-          { text: 'CATIA CAA RADE', link: '/platforms/catia' },
-          { text: 'Siemens NX', link: '/platforms/nx' },
-          { text: 'Onshape', link: '/platforms/onshape' },
-          { text: 'MicroStation + iTwin', link: '/platforms/microstation' },
-          { text: 'SolidWorks', link: '/platforms/solidworks' },
-          { text: 'SketchUp', link: '/platforms/sketchup' },
-          { text: 'FreeCAD', link: '/platforms/freecad' },
-          { text: 'BricsCAD (BRX + Qt/QML)', link: '/platforms/bricscad' },
+          { text: '中文学习路径', link: '/ai/zh-CN/learn/claude-code' },
+          { text: '英文快速入门', link: '/ai/en/claude-code/quickstart' },
+          { text: '英文文档概览', link: '/ai/en/claude-code/overview' },
         ],
       },
-      { text: '术语表', link: '/glossary' },
-      { text: 'AI 双语手册', link: '/ai/zh-CN/learn/claude-code' },
+      {
+        text: 'Codex',
+        items: [
+          { text: '中文学习路径', link: '/ai/zh-CN/learn/codex' },
+          { text: '英文快速入门', link: '/ai/en/codex/quickstart' },
+          { text: '英文文档概览', link: '/ai/en/codex/overview' },
+        ],
+      },
+      {
+        text: '附录',
+        items: [
+          { text: 'CAD API 设计哲学', link: '/appendix/cad' },
+          { text: '理论框架', link: '/theory' },
+          { text: '横向对比', link: '/comparison' },
+          { text: 'UI 框架研究', link: '/ui-frameworks' },
+          { text: '术语表', link: '/glossary' },
+        ],
+      },
     ],
 
-    sidebar: [
-      {
-        text: '系列总览',
-        items: [
-          { text: '总目录与导读', link: '/' },
-          { text: '理论框架（顶层）', link: '/theory' },
-          { text: '横向对比（全景矩阵）', link: '/comparison' },
-        ],
-      },
-      {
-        text: '横向研究',
-        items: [
-          { text: 'UI 框架研究', link: '/ui-frameworks' },
-        ],
-      },
-      {
-        text: '厂商深度剖析',
-        collapsed: false,
-        items: [
-          { text: '3.1 AutoCAD ObjectARX', link: '/platforms/autocad' },
-          { text: '3.2 CATIA CAA RADE', link: '/platforms/catia' },
-          { text: '3.3 Siemens NX (NX Open)', link: '/platforms/nx' },
-          { text: '3.4 Onshape (REST + FeatureScript)', link: '/platforms/onshape' },
-          { text: '3.5 MicroStation + iTwin', link: '/platforms/microstation' },
-          { text: '3.6 SolidWorks', link: '/platforms/solidworks' },
-          { text: '3.7 SketchUp Ruby', link: '/platforms/sketchup' },
-          { text: '3.8 FreeCAD', link: '/platforms/freecad' },
-          { text: '3.9 BricsCAD (BRX + Qt/QML)', link: '/platforms/bricscad' },
-        ],
-      },
-      {
-        text: '工具',
-        items: [
-          { text: '术语表（Glossary）', link: '/glossary' },
-        ],
-      },
-      {
-        text: 'AI 双语手册',
-        collapsed: false,
-        items: AI_SIDEBAR,
-      },
-    ],
+    sidebar: {
+      '/ai/': AI_DOC_SIDEBAR,
+      '/appendix/': CAD_SIDEBAR,
+      '/theory': CAD_SIDEBAR,
+      '/comparison': CAD_SIDEBAR,
+      '/ui-frameworks': CAD_SIDEBAR,
+      '/platforms/': CAD_SIDEBAR,
+      '/glossary': CAD_SIDEBAR,
+    },
 
     outline: {
       level: [2, 3],
