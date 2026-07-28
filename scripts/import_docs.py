@@ -10,9 +10,11 @@ ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / 'source'
 DOCS = ROOT / 'docs'
 PLATFORMS = DOCS / 'platforms'
+APPENDIX = DOCS / 'appendix'
 
 FILE_MAP = {
-    '文档0-总目录与导读-V4.md': ('index.md', '通用 CAD 平台 API 设计哲学'),
+    'AI教程与文档.md': ('index.md', 'AI 教程及文档'),
+    '文档0-总目录与导读-V4.md': ('appendix/cad.md', '通用 CAD 平台 API 设计哲学'),
     '文档1-通用CAD平台API设计哲学-V4.md': ('theory.md', '通用 CAD 平台 API 设计哲学'),
     '文档2-主流CAD厂商API设计概述与对比-V4.md': ('comparison.md', '主流 CAD 厂商 API 设计概述与对比'),
     '3.1-AutoCAD-ObjectARX-API设计深度剖析-V4.md': ('platforms/autocad.md', 'AutoCAD ObjectARX API 设计深度剖析'),
@@ -28,14 +30,19 @@ FILE_MAP = {
     '术语表-V4.md': ('glossary.md', '术语表'),
 }
 
+PAGE_FRONTMATTER = {
+    'AI教程与文档.md': 'sidebar: false\noutline: false\npageClass: ai-home\n',
+}
 
-def add_frontmatter(content: str, title: str) -> str:
-    fm = f'---\ntitle: {title}\n---\n\n'
+
+def add_frontmatter(content: str, title: str, extra: str = '') -> str:
+    fm = f'---\ntitle: {title}\n{extra}---\n\n'
     return fm + content
 
 
 def main() -> int:
     PLATFORMS.mkdir(parents=True, exist_ok=True)
+    APPENDIX.mkdir(parents=True, exist_ok=True)
 
     success = 0
     missing = []
@@ -49,7 +56,7 @@ def main() -> int:
             continue
 
         content = src.read_text(encoding='utf-8')
-        new_content = add_frontmatter(content, title)
+        new_content = add_frontmatter(content, title, PAGE_FRONTMATTER.get(src_name, ''))
 
         dst.parent.mkdir(parents=True, exist_ok=True)
         dst.write_text(new_content, encoding='utf-8')
