@@ -5,13 +5,15 @@ product: codex
 lang: en
 canonical_url: https://learn.chatgpt.com/docs/agent-configuration/agents-md
 owner: OpenAI
-content_sha256: b4c2d6f542b544fb02ec932aa2ab3285039918bde8fa33a712e5031005025f17
+content_sha256: 4a81af9eeb7597184d295ff7f142478855b0b09100d8b75c2ae1058b3dd3203f
 ---
 [Official source](https://learn.chatgpt.com/docs/agent-configuration/agents-md)
 
 Content owner: OpenAI
 
 # Custom instructions with AGENTS.md
+
+> For the complete documentation index, see [llms.txt](https://learn.chatgpt.com/llms.txt). Markdown versions of documentation pages are available by appending `.md` to the page URL.
 
 Codex reads `AGENTS.md` files before doing any work. By layering global guidance with project-specific overrides, you can start each task with consistent expectations, no matter which repository you open.
 
@@ -31,13 +33,13 @@ Create persistent defaults in your Codex home directory so every repository inhe
 
 1. Ensure the directory exists:
 
-   ```bash
+```bash
    mkdir -p ~/.codex
-   ```
+```
 
 2. Create `~/.codex/AGENTS.md` with reusable preferences:
 
-   ```md
+```md
    # ~/.codex/AGENTS.md
 
    ## Working agreements
@@ -45,13 +47,13 @@ Create persistent defaults in your Codex home directory so every repository inhe
    - Always run `npm test` after modifying JavaScript files.
    - Prefer `pnpm` when installing dependencies.
    - Ask for confirmation before adding new production dependencies.
-   ```
+```
 
 3. Run Codex anywhere to confirm it loads the file:
 
-   ```bash
+```bash
    codex --ask-for-approval never "Summarize the current instructions."
-   ```
+```
 
    Expected: Codex quotes the items from `~/.codex/AGENTS.md` before proposing work.
 
@@ -63,31 +65,31 @@ Repository-level files keep Codex aware of project norms while still inheriting 
 
 1. In your repository root, add an `AGENTS.md` that covers basic setup:
 
-   ```md
+```md
    # AGENTS.md
 
    ## Repository expectations
 
    - Run `npm run lint` before opening a pull request.
    - Document public utilities in `docs/` when you change behavior.
-   ```
+```
 
 2. Add overrides in nested directories when specific teams need different rules. For example, inside `services/payments/` create `AGENTS.override.md`:
 
-   ```md
+```md
    # services/payments/AGENTS.override.md
 
    ## Payments service rules
 
    - Use `make test-payments` instead of `npm test`.
    - Never rotate API keys without notifying the security channel.
-   ```
+```
 
 3. Start Codex from the payments directory:
 
-   ```bash
+```bash
    codex --cd services/payments --ask-for-approval never "List the instruction sources you loaded."
-   ```
+```
 
    Expected: Codex reports the global file first, the repository root `AGENTS.md` second, and the payments override last.
 
@@ -159,11 +161,11 @@ If your repository already uses a different filename (for example `TEAM_GUIDE.md
 
 1. Edit your Codex configuration:
 
-   ```toml
+```toml
    # ~/.codex/config.toml
    project_doc_fallback_filenames = ["TEAM_GUIDE.md", ".agents.md"]
    project_doc_max_bytes = 65536
-   ```
+```
 
 2. Restart Codex or run a new command so the updated configuration loads.
 

@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from dataclasses import dataclass
 from typing import ClassVar, Final, Literal, NewType, Self
@@ -21,7 +22,7 @@ from pydantic import (
 SourceId = NewType("SourceId", str)
 
 Product = Literal["claude-code", "codex"]
-FetchFormat = Literal["markdown", "html"]
+FetchFormat = Literal["markdown", "html", "html-main"]
 Owner = Literal["Anthropic", "OpenAI"]
 RowSpec = tuple[str, str, str, str, str, str, FetchFormat, Owner]
 
@@ -229,8 +230,12 @@ _FROZEN_SOURCE_SET: Final[frozenset[RowSpec]] = frozenset(
         ),
     )
 )
-_MANIFEST_SIZE: Final = 20
-_PRODUCT_ENTRY_SIZE: Final = 10
+_MANIFEST_SIZE: Final = 303
+_PRODUCT_ENTRY_SIZES: Final[dict[Product, int]] = {
+    "claude-code": 172,
+    "codex": 131,
+}
+_SAFE_SLUG_RE: Final = re.compile(r"^[a-z0-9][a-z0-9-]*(?:/[a-z0-9][a-z0-9-]*)*$")
 
 
 class Source(BaseModel):
@@ -246,12 +251,22 @@ class Source(BaseModel):
     product: Product
     slug: str
     title: str
+    section: str
     canonical_url: str
     fetch_url: str
     fetch_format: FetchFormat
     owner: Owner
 
-    @field_validator("id", "product", "slug", "title", "owner", "fetch_format", mode="after")
+    @field_validator(
+        "id",
+        "product",
+        "slug",
+        "title",
+        "section",
+        "owner",
+        "fetch_format",
+        mode="after",
+    )
     @classmethod
     def _non_empty(cls, value: str, info: ValidationInfo) -> str:
         if not value:
@@ -275,6 +290,19 @@ class Source(BaseModel):
     def _validate_id(self) -> Self:
         if self.id != SourceId(f"{self.product}/{self.slug}"):
             msg = "source id must match product and slug"
+            raise ValueError(msg)
+        if _SAFE_SLUG_RE.fullmatch(self.slug) is None:
+            msg = "source slug must be a safe relative route"
+            raise ValueError(msg)
+        canonical_host = urlparse(self.canonical_url).hostname
+        fetch_host = urlparse(self.fetch_url).hostname
+        trusted_hosts = (
+            {"code.claude.com"}
+            if self.owner == "Anthropic"
+            else {"developers.openai.com", "learn.chatgpt.com"}
+        )
+        if canonical_host not in trusted_hosts or fetch_host not in trusted_hosts:
+            msg = "source URLs must use an owner-controlled host"
             raise ValueError(msg)
         return self
 
@@ -302,15 +330,11 @@ class SourceManifest(RootModel[tuple[Source, ...]]):
             raise ValueError(msg)
 
         product_counts = Counter(source.product for source in sources)
-        if (
-            product_counts["claude-code"] != _PRODUCT_ENTRY_SIZE
-            or product_counts["codex"] != _PRODUCT_ENTRY_SIZE
+        if any(
+            product_counts[product] != expected
+            for product, expected in _PRODUCT_ENTRY_SIZES.items()
         ):
-            msg = "source manifest must have ten entries per product"
-            raise ValueError(msg)
-
-        if frozenset(_identity_tuple(source) for source in sources) != _FROZEN_SOURCE_SET:
-            msg = "source manifest does not match frozen identity set"
+            msg = "source manifest has the wrong product entry counts"
             raise ValueError(msg)
 
         return self

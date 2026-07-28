@@ -32,6 +32,15 @@ _MDX_COMMENT_RE: Final = re.compile(r"(?s)\{/\*.*?\*/\}")
 _MDX_ICON_SLOT_RE: Final = re.compile(
     r'(?ms)\s*<span\s+slot="icon">.*?</span>\s*'
 )
+_UNSAFE_HTML_RE: Final = re.compile(
+    r"(?is)<(?:script|style)\b[^>]*(?:/>|>.*?</(?:script|style)\s*>)"
+)
+_JSX_STYLE_RE: Final = re.compile(r"\s+style=\{\{[^{}]*\}\}")
+_HTML_IMAGE_RE: Final = re.compile(r"(?is)<img\b[^>]*>")
+_HTML_ATTRIBUTE_RE: Final = re.compile(r"""(?i)\b(src|alt)=["']([^"']*)["']""")
+_HTML_BREAK_RE: Final = re.compile(r"(?i)<br\s*/?>")
+_HTML_TAG_RE: Final = re.compile(r"(?is)</?[A-Za-z][^>]*>")
+_ROOT_IMAGE_RE: Final = re.compile(r"(!\[[^\]]*]\()(/[^)\s]+)")
 
 
 @dataclass(frozen=True, slots=True)
@@ -234,18 +243,65 @@ def _derive_source_page(data: bytes, item: MaterializedRoute) -> bytes:
         + counterpart
         + f"\nai_search_label: {label}"
     ).encode()
-    public_body = _strip_mdx_components(data[closing:].decode("utf-8")).encode()
+    public_markdown = _strip_mdx_components(data[closing:].decode("utf-8"))
+    public_markdown = public_markdown.replace("{{", "&#123;&#123;")
+    public_markdown = public_markdown.replace("}}", "&#125;&#125;")
+    product = str(item.source_id).split("/", maxsplit=1)[0]
+    asset_host = (
+        "https://code.claude.com"
+        if product == "claude-code"
+        else "https://learn.chatgpt.com"
+    )
+    public_body = _ROOT_IMAGE_RE.sub(
+        lambda match: f"{match.group(1)}{asset_host}{match.group(2)}",
+        public_markdown,
+    ).encode()
     return derived + public_body
 
 
 def _strip_mdx_components(markdown: str) -> str:
     protected = protect_markdown(markdown)
-    text = _MDX_COMMENT_RE.sub("", protected.text)
+    text = _strip_mdx_exports(protected.text)
+    text = _MDX_COMMENT_RE.sub("", text)
     text = _MDX_ICON_SLOT_RE.sub("", text)
+    text = _UNSAFE_HTML_RE.sub("", text)
+    text = _JSX_STYLE_RE.sub("", text)
     text = _MDX_COMPONENT_RE.sub("", text)
+    text = _HTML_IMAGE_RE.sub(_markdown_image, text)
+    text = _HTML_BREAK_RE.sub("\n", text)
+    text = _HTML_TAG_RE.sub("", text)
     for span in protected.spans:
         text = text.replace(span.placeholder, span.original, 1)
     return text
+
+
+def _markdown_image(match: re.Match[str]) -> str:
+    attributes = dict(_HTML_ATTRIBUTE_RE.findall(match.group()))
+    source = attributes.get("src", "")
+    if not source:
+        return ""
+    return f"![{attributes.get('alt', '')}]({source})"
+
+
+def _strip_mdx_exports(markdown: str) -> str:
+    lines = markdown.splitlines(keepends=True)
+    output: list[str] = []
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        if not line.startswith(("export const ", "export let ", "export var ", "export function ")):
+            output.append(line)
+            index += 1
+            continue
+        depth = 0
+        while index < len(lines):
+            current = lines[index]
+            depth += current.count("{") - current.count("}")
+            index += 1
+            if depth <= 0 and current.rstrip().endswith((";", "}")):
+                break
+        output.append("\n")
+    return "".join(output)
 
 
 def _rollback(

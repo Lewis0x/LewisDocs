@@ -76,7 +76,12 @@ def fetch_source(client: httpx2.Client, source: Source) -> FetchedPage:  # noqa:
     if final_scheme != "https" or source_scheme != "https":
         _fetch_error(source)
 
-    if final_hostname != source_hostname:
+    allowed_redirect = (
+        source.owner == "OpenAI"
+        and source_hostname == "developers.openai.com"
+        and final_hostname == "learn.chatgpt.com"
+    )
+    if final_hostname != source_hostname and not allowed_redirect:
         _fetch_error(source)
 
     if (

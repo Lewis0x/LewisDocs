@@ -5,13 +5,15 @@ product: codex
 lang: en
 canonical_url: https://learn.chatgpt.com/docs/customization/overview
 owner: OpenAI
-content_sha256: 9d2b2def40c26ae1f7ccc4ac54a2de210f56e7a694a183b3a8d67d9a1e18d5b4
+content_sha256: d683a7472f5ac3a92652928491e75e731fa13591e7675d4aed5676a560fc1e28
 ---
 [Official source](https://learn.chatgpt.com/docs/customization/overview)
 
 Content owner: OpenAI
 
 # Customization
+
+> For the complete documentation index, see [llms.txt](https://learn.chatgpt.com/llms.txt). Markdown versions of documentation pages are available by appending `.md` to the page URL.
 
 Customization is how you make Codex work the way your team works.
 

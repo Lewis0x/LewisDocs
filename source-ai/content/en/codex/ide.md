@@ -5,7 +5,7 @@ product: codex
 lang: en
 canonical_url: https://developers.openai.com/codex/ide
 owner: OpenAI
-content_sha256: d57e2af6ef1d146b12eeb4b5c8d4750d7adb687a6ae0ad5a92406ce1c4ab38c3
+content_sha256: cfea2150df0b69e056bc94c5c8ad54bfc882af654ae70c1461face696c1046af
 ---
 [Official source](https://developers.openai.com/codex/ide)
 
@@ -89,7 +89,7 @@ Stay close to the code while Codex explains, edits, reviews, and delegates.
 
 01
 
-Use the context already open
+### Use the context already open
 
 Add an open file, a selection, or a recent chat to the composer, then ask Codex to explain or edit the code with that context already attached.
 
@@ -101,7 +101,7 @@ MERGE_REBRAND_POSITIONING.mdelement_merged_pill.png.codex/skills/add-codex-use-c
 
 02
 
-Review changes beside your code
+### Review changes beside your code
 
 Review a concise summary and the changed lines without an extra navigation pane. Inspect the two affected files, keep the edits you want, and ask for a follow-up from the same view.
 
@@ -111,7 +111,7 @@ Learn more
 
 03
 
-Delegate when the task gets bigger
+### Delegate when the task gets bigger
 
 Choose local work for fast, hands-on iteration, or connect Codex web to delegate a longer task. The chat stays available when you return to review the result.
 
@@ -121,22 +121,21 @@ Learn more
 
 Continue inWork locallyCloudopenai/developers-website
 
-Use Codex IDE extension when…
+## Use Codex IDE extension when…
 
-
-You are making focused edits
+### You are making focused edits
 
 Keep the relevant files and Codex in the same view.
 
-You are learning unfamiliar code
+### You are learning unfamiliar code
 
 Ask about the files and symbols already open in the editor.
 
-You want to review changes in place
+### You want to review changes in place
 
 Inspect and apply edits alongside the source.
 
-You want to delegate a larger task
+### You want to delegate a larger task
 
 Start cloud work from the IDE and return to the result.
 

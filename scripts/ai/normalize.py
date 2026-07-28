@@ -41,7 +41,10 @@ def normalize_source(*, source: Source, fetched: FetchedPage) -> NormalizedPage:
         else:
             if content_type not in _HTML_CONTENT_TYPES:
                 _raise_normalize_error(source)
-            markdown = normalize_html_content(fetched.text)
+            markdown = normalize_html_content(
+                fetched.text,
+                allow_main=source.fetch_format == "html-main",
+            )
             if _H1_RE.search(markdown) is None:
                 markdown = f"# {source.title}\n\n{markdown}"
         return NormalizedPage(
