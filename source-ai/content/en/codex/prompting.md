@@ -5,7 +5,7 @@ product: codex
 lang: en
 canonical_url: https://learn.chatgpt.com/docs/prompting
 owner: OpenAI
-content_sha256: 6d4236e02130eff9a4fd8869fd165f5afba09f325b4d74d536654ac7dae09c6b
+content_sha256: f89be18e0d96519ef6e9a0e63540d68f61a170ffcef0a2a64bc8bf58446a2380
 ---
 [Official source](https://learn.chatgpt.com/docs/prompting)
 
