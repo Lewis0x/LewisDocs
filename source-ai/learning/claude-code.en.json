@@ -1,0 +1,130 @@
+{
+  "version": 1,
+  "product": "claude-code",
+  "title": "Claude Code Learning Path",
+  "summary": "Build reliable Claude Code habits through small, observable, and reversible repository tasks.",
+  "stages": {
+    "first-controlled-task": {
+      "title": "Complete a controlled first task",
+      "objective": "Learn the basic interaction loop in a practice repository before increasing scope.",
+      "risk": "Keep the first task local and reversible; do not publish, deploy, or expose credentials."
+    },
+    "project-context": {
+      "title": "Establish project context",
+      "objective": "Separate durable repository guidance from instructions that belong only to the current task.",
+      "risk": "Do not place secrets, personal data, or temporary incident details in persistent project memory."
+    },
+    "permissions-and-sandbox": {
+      "title": "Set permissions and sandbox boundaries",
+      "objective": "Recognize the approval boundary for reading, writing, command execution, and external actions.",
+      "risk": "Treat credentials, remote writes, releases, and destructive commands as explicit approval points."
+    },
+    "implementation-loop": {
+      "title": "Close the implementation loop",
+      "objective": "Move from inspection through a focused change, tests, diff review, and final verification.",
+      "risk": "A plausible answer is not completion; verify behavior and inspect the actual diff."
+    },
+    "subagents": {
+      "title": "Delegate with subagents",
+      "objective": "Use a subagent for an independent task with a narrow ownership boundary and a clear return format.",
+      "risk": "Avoid overlapping write ownership and never delegate credentials or ambiguous remote actions."
+    },
+    "hooks": {
+      "title": "Automate deterministic checks with hooks",
+      "objective": "Run a predictable formatting or validation command at the appropriate lifecycle event.",
+      "risk": "Start with an observable, reversible hook and avoid hidden destructive side effects."
+    },
+    "mcp": {
+      "title": "Connect a read-only MCP server",
+      "objective": "Understand how an MCP server exposes tools and data before granting write capabilities.",
+      "risk": "Review authentication, data exposure, tool scope, and untrusted tool output."
+    },
+    "delivery-automation": {
+      "title": "Inspect delivery automation",
+      "objective": "Understand how Claude Code participates in CI without performing an unauthorized remote write.",
+      "risk": "Workflow tokens, repository permissions, publishing, and deployments require explicit authorization."
+    }
+  },
+  "tasks": {
+    "claude-explore-read-only": {
+      "title": "Explore a repository without writing",
+      "instruction": "Ask Claude Code to identify the project structure, active instructions, and primary test command.",
+      "done_when": "The response cites concrete files and makes no workspace changes."
+    },
+    "claude-verify-first-change": {
+      "title": "Make and verify one small change",
+      "instruction": "Choose a reversible edit, request the change, then run the narrowest relevant check.",
+      "done_when": "The intended behavior is verified and the final diff contains only the expected edit."
+    },
+    "claude-create-project-context": {
+      "title": "Add durable project guidance",
+      "instruction": "Add one stable, testable repository rule in the project guidance mechanism.",
+      "done_when": "The rule is concise, scoped correctly, and distinguishable from a one-off task instruction."
+    },
+    "claude-verify-context-source": {
+      "title": "Verify context discovery",
+      "instruction": "Start a fresh task and ask Claude Code to identify the rule and where it came from.",
+      "done_when": "The reported source and effective scope match the repository layout."
+    },
+    "claude-classify-operation-boundaries": {
+      "title": "Classify operation boundaries",
+      "instruction": "Sort example actions into read, local write, command execution, external write, and destructive operation.",
+      "done_when": "Each action has a justified permission or approval expectation."
+    },
+    "claude-verify-denied-operation": {
+      "title": "Verify a denied operation",
+      "instruction": "Use a harmless practice case to confirm that a disallowed action is blocked or asks for approval.",
+      "done_when": "The boundary is observable and no unauthorized side effect occurs."
+    },
+    "claude-complete-implementation-loop": {
+      "title": "Complete a focused implementation",
+      "instruction": "Have Claude Code inspect, edit, and test one narrowly scoped behavior.",
+      "done_when": "The requested behavior works and the relevant check passes."
+    },
+    "claude-review-diff-and-tests": {
+      "title": "Review the evidence",
+      "instruction": "Inspect the diff and test output, then ask for a regression-focused review.",
+      "done_when": "Unexpected changes are removed and any remaining risk is stated explicitly."
+    },
+    "claude-delegate-read-only-analysis": {
+      "title": "Delegate a read-only analysis",
+      "instruction": "Assign a subagent one independent investigation with explicit files, constraints, and output fields.",
+      "done_when": "The subagent returns grounded findings without editing files."
+    },
+    "claude-verify-subagent-boundary": {
+      "title": "Verify subagent ownership",
+      "instruction": "Check that the delegated scope does not overlap another writer or require hidden permissions.",
+      "done_when": "Ownership, evidence, and the next decision are unambiguous."
+    },
+    "claude-add-reversible-hook": {
+      "title": "Add a reversible hook",
+      "instruction": "Configure one local formatting or validation hook in a practice repository.",
+      "done_when": "The hook is easy to disable and its command is visible in project configuration."
+    },
+    "claude-verify-hook-behavior": {
+      "title": "Verify hook behavior",
+      "instruction": "Trigger the hook once on a controlled input and inspect its exit status and changes.",
+      "done_when": "The hook runs at the intended event and creates no unrelated changes."
+    },
+    "claude-connect-read-only-mcp": {
+      "title": "Connect a read-only MCP",
+      "instruction": "Configure a local or test MCP server that exposes only read operations.",
+      "done_when": "Claude Code can list and invoke the expected read-only tool."
+    },
+    "claude-audit-mcp-scope": {
+      "title": "Audit the MCP boundary",
+      "instruction": "Review the server scope, credentials, returned data, and handling of untrusted output.",
+      "done_when": "The available tools and data are no broader than the stated exercise."
+    },
+    "claude-inspect-delivery-workflow": {
+      "title": "Inspect a delivery workflow locally",
+      "instruction": "Read a GitHub Actions workflow and trace its triggers, permissions, inputs, and expected checks.",
+      "done_when": "The execution path and privileged steps are identified without running a remote workflow."
+    },
+    "claude-verify-no-remote-write": {
+      "title": "Confirm the remote-write boundary",
+      "instruction": "List every step that could comment, push, publish, deploy, or change remote state.",
+      "done_when": "Each remote write has an explicit authorization requirement and none was executed."
+    }
+  }
+}

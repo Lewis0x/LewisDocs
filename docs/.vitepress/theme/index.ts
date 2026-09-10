@@ -2,6 +2,8 @@ import type { Theme } from 'vitepress'
 import DefaultTheme from 'vitepress/theme'
 import { h } from 'vue'
 import AiLanguageSwitch from './components/AiLanguageSwitch.vue'
+import AiLearningPath from './components/AiLearningPath.vue'
+import AiProductSwitch from './components/AiProductSwitch.vue'
 import Honeypot from './components/Honeypot.vue'
 import Lightbox from './components/Lightbox.vue'
 import OutlineResizer from './components/OutlineResizer.vue'
@@ -17,6 +19,7 @@ const theme: Theme = {
   Layout() {
     return h(DefaultTheme.Layout, null, {
       'layout-top': () => [h(OutlineToggle), h(OutlineResizer)],
+      'sidebar-nav-before': () => h(AiProductSwitch),
       'doc-before': () => h(AiLanguageSwitch),
       'layout-bottom': () => [h(Honeypot), h(Lightbox)],
     })
@@ -24,6 +27,7 @@ const theme: Theme = {
   enhanceApp({ app }) {
     // 全局组件：所有 .md 文件中可直接 `<Term def="...">B-Rep</Term>`
     app.component('Term', Term)
+    app.component('AiLearningPath', AiLearningPath)
   },
 }
 

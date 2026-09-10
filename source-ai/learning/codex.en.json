@@ -1,0 +1,115 @@
+{
+  "version": 1,
+  "product": "codex",
+  "title": "Codex Learning Path",
+  "summary": "Learn Codex through controlled repository work, explicit project guidance, and verifiable engineering loops.",
+  "stages": {
+    "first-controlled-task": {
+      "title": "Complete a controlled first task",
+      "objective": "Learn how context and prompting shape a small, observable Codex task.",
+      "risk": "Begin in a practice repository and avoid credentials, publishing, deployments, and remote writes."
+    },
+    "project-instructions": {
+      "title": "Establish project instructions",
+      "objective": "Make stable repository constraints discoverable through the correct AGENTS.md hierarchy.",
+      "risk": "Keep instructions scoped, testable, and free of secrets or transient task details."
+    },
+    "approvals-and-sandbox": {
+      "title": "Understand approvals and sandboxing",
+      "objective": "Recognize when Codex can proceed and when it must request permission for a higher-risk action.",
+      "risk": "External writes, credentials, destructive commands, and sandbox escapes always need deliberate review."
+    },
+    "implementation-loop": {
+      "title": "Close the implementation loop",
+      "objective": "Move from repository inspection through a focused edit, tests, diff review, and code review.",
+      "risk": "Do not accept a completion claim without checking the changed behavior and actual evidence."
+    },
+    "mcp": {
+      "title": "Connect a read-only MCP server",
+      "objective": "Use an MCP integration while keeping tools, data, and authentication within a known boundary.",
+      "risk": "Treat tool output as untrusted input and review every capability before enabling writes."
+    },
+    "skills-and-plugins": {
+      "title": "Package reusable capabilities",
+      "objective": "Turn one repeated workflow into a small, documented skill or plugin with a clear trigger.",
+      "risk": "Keep permissions narrow and avoid hiding remote changes or credentials inside automation."
+    },
+    "cloud-and-ci": {
+      "title": "Understand cloud tasks and CI",
+      "objective": "Trace how local intent becomes a cloud task or CI job without executing an unauthorized write.",
+      "risk": "Repository tokens, comments, commits, pull requests, releases, and deployments require explicit authorization."
+    }
+  },
+  "tasks": {
+    "codex-explore-read-only": {
+      "title": "Explore a repository without writing",
+      "instruction": "Ask Codex to identify the repository structure, active guidance, and narrowest useful test command.",
+      "done_when": "The response cites concrete files and leaves the workspace unchanged."
+    },
+    "codex-improve-first-prompt": {
+      "title": "Improve the first prompt",
+      "instruction": "Rewrite a vague request with a concrete goal, scope, constraints, and verification target.",
+      "done_when": "Codex can restate the task and complete one small, verified change without scope drift."
+    },
+    "codex-create-project-guidance": {
+      "title": "Create project guidance",
+      "instruction": "Add one stable, testable repository rule to the appropriate AGENTS.md file.",
+      "done_when": "The rule is concise and its directory scope is unambiguous."
+    },
+    "codex-verify-guidance-discovery": {
+      "title": "Verify guidance discovery",
+      "instruction": "Start a fresh task and ask Codex to list the effective project instructions and their sources.",
+      "done_when": "The output matches the repository instruction hierarchy."
+    },
+    "codex-classify-operation-boundaries": {
+      "title": "Classify operation boundaries",
+      "instruction": "Sort example actions into read, local write, command execution, external write, and destructive operation.",
+      "done_when": "Each action has a justified sandbox and approval expectation."
+    },
+    "codex-verify-approval-path": {
+      "title": "Verify an approval path",
+      "instruction": "Use a harmless practice case to observe when Codex proceeds, asks, or refuses.",
+      "done_when": "The expected boundary is visible and no unauthorized side effect occurs."
+    },
+    "codex-complete-implementation-loop": {
+      "title": "Complete a focused implementation",
+      "instruction": "Have Codex inspect, edit, and test one narrowly scoped behavior.",
+      "done_when": "The intended behavior works and the relevant check passes."
+    },
+    "codex-review-diff-and-tests": {
+      "title": "Review the diff and tests",
+      "instruction": "Inspect the diff and test output, then run a regression-focused code review.",
+      "done_when": "Unexpected changes are removed and remaining risk is explicit."
+    },
+    "codex-connect-read-only-mcp": {
+      "title": "Connect a read-only MCP",
+      "instruction": "Configure a local or test MCP server that exposes only the read capability needed for the exercise.",
+      "done_when": "Codex lists and invokes only the expected read-only tool."
+    },
+    "codex-audit-mcp-scope": {
+      "title": "Audit the MCP boundary",
+      "instruction": "Review tool schemas, credentials, returned data, and handling of untrusted output.",
+      "done_when": "The integration exposes no capability or data beyond the stated scope."
+    },
+    "codex-package-repeatable-workflow": {
+      "title": "Package a repeated workflow",
+      "instruction": "Choose a small repeated process and express it as a documented skill or plugin.",
+      "done_when": "The capability has a clear trigger, inputs, outputs, and ownership boundary."
+    },
+    "codex-verify-reusable-capability": {
+      "title": "Verify the reusable capability",
+      "instruction": "Run the capability on a controlled example and inspect every resulting change.",
+      "done_when": "It behaves predictably, preserves unrelated files, and documents required permissions."
+    },
+    "codex-inspect-cloud-ci-flow": {
+      "title": "Inspect a cloud and CI flow",
+      "instruction": "Trace task inputs, environment, permissions, checks, and outputs without starting a remote job.",
+      "done_when": "The execution path and all privileged steps are identified."
+    },
+    "codex-verify-no-remote-write": {
+      "title": "Confirm the remote-write boundary",
+      "instruction": "List every action that could comment, push, open a pull request, release, or deploy.",
+      "done_when": "Each remote write has an explicit authorization point and none was executed."
+    }
+  }
+}

@@ -1,0 +1,130 @@
+{
+  "version": 1,
+  "product": "claude-code",
+  "title": "Claude Code 学习路径",
+  "summary": "通过小范围、可观察、可回退的仓库任务，逐步建立可靠的 Claude Code 工作习惯。",
+  "stages": {
+    "first-controlled-task": {
+      "title": "完成首次受控任务",
+      "objective": "先在练习仓库掌握基本交互闭环，再逐步扩大任务范围。",
+      "risk": "首次任务应保持本地且可回退，不要发布、部署或暴露凭据。"
+    },
+    "project-context": {
+      "title": "建立项目上下文",
+      "objective": "区分长期有效的仓库指引与只属于当前任务的一次性说明。",
+      "risk": "不要把密钥、个人数据或临时事故信息写入持久项目记忆。"
+    },
+    "permissions-and-sandbox": {
+      "title": "设置权限与沙箱边界",
+      "objective": "识别读取、写入、命令执行和外部操作各自的审批边界。",
+      "risk": "凭据、远程写入、发布和破坏性命令都应作为明确审批点。"
+    },
+    "implementation-loop": {
+      "title": "闭合实现循环",
+      "objective": "从检查现状推进到聚焦修改、测试、diff 检查和最终验证。",
+      "risk": "看起来合理不等于完成，必须验证行为并检查真实 diff。"
+    },
+    "subagents": {
+      "title": "使用子代理委派任务",
+      "objective": "把独立任务交给边界清晰、返回格式明确的子代理处理。",
+      "risk": "避免多个写入者范围重叠，也不要委派凭据或含糊的远程操作。"
+    },
+    "hooks": {
+      "title": "用 Hooks 自动执行确定性检查",
+      "objective": "在合适的生命周期事件运行可预测的格式化或校验命令。",
+      "risk": "先使用可观察、可回退的 Hook，避免隐藏的破坏性副作用。"
+    },
+    "mcp": {
+      "title": "连接只读 MCP 服务",
+      "objective": "在授予写能力之前，理解 MCP 服务如何暴露工具和数据。",
+      "risk": "检查认证、数据暴露、工具范围以及不可信工具输出。"
+    },
+    "delivery-automation": {
+      "title": "检查交付自动化",
+      "objective": "理解 Claude Code 如何参与 CI，同时避免未经授权的远程写入。",
+      "risk": "工作流令牌、仓库权限、发布和部署都需要明确授权。"
+    }
+  },
+  "tasks": {
+    "claude-explore-read-only": {
+      "title": "只读探索仓库",
+      "instruction": "让 Claude Code 识别项目结构、生效指令和主要测试命令。",
+      "done_when": "回答引用了具体文件，且工作区没有发生修改。"
+    },
+    "claude-verify-first-change": {
+      "title": "完成并验证一项小修改",
+      "instruction": "选择可回退的编辑，请求完成修改，再运行最窄的相关检查。",
+      "done_when": "预期行为得到验证，最终 diff 只包含计划内修改。"
+    },
+    "claude-create-project-context": {
+      "title": "添加长期项目指引",
+      "instruction": "在项目指引机制中添加一条稳定、可验证的仓库规则。",
+      "done_when": "规则简洁、作用域正确，并能与一次性任务说明区分。"
+    },
+    "claude-verify-context-source": {
+      "title": "验证上下文发现",
+      "instruction": "发起一个新任务，让 Claude Code 说明该规则及其来源。",
+      "done_when": "报告的来源和生效范围与仓库布局一致。"
+    },
+    "claude-classify-operation-boundaries": {
+      "title": "划分操作边界",
+      "instruction": "把示例操作分为读取、本地写入、命令执行、外部写入和破坏性操作。",
+      "done_when": "每项操作都有合理的权限或审批预期。"
+    },
+    "claude-verify-denied-operation": {
+      "title": "验证被拒绝的操作",
+      "instruction": "使用无害练习确认不允许的操作会被阻止或请求审批。",
+      "done_when": "边界可以被观察，且没有产生未经授权的副作用。"
+    },
+    "claude-complete-implementation-loop": {
+      "title": "完成一次聚焦实现",
+      "instruction": "让 Claude Code 检查、修改并测试一个范围明确的行为。",
+      "done_when": "请求的行为正常，相关检查通过。"
+    },
+    "claude-review-diff-and-tests": {
+      "title": "复核实现证据",
+      "instruction": "检查 diff 和测试输出，再发起一次面向回归的审查。",
+      "done_when": "意外修改已移除，剩余风险被明确说明。"
+    },
+    "claude-delegate-read-only-analysis": {
+      "title": "委派只读分析",
+      "instruction": "向子代理分配一个独立调查，并明确文件、约束和返回字段。",
+      "done_when": "子代理返回有依据的发现，且没有修改文件。"
+    },
+    "claude-verify-subagent-boundary": {
+      "title": "验证子代理边界",
+      "instruction": "检查委派范围是否与其他写入者重叠，或隐含额外权限。",
+      "done_when": "所有权、证据和下一步决策都清晰明确。"
+    },
+    "claude-add-reversible-hook": {
+      "title": "添加可回退 Hook",
+      "instruction": "在练习仓库配置一个本地格式化或校验 Hook。",
+      "done_when": "Hook 容易停用，执行命令在项目配置中清晰可见。"
+    },
+    "claude-verify-hook-behavior": {
+      "title": "验证 Hook 行为",
+      "instruction": "用受控输入触发一次 Hook，并检查退出状态和文件变化。",
+      "done_when": "Hook 在预期事件运行，且没有产生无关修改。"
+    },
+    "claude-connect-read-only-mcp": {
+      "title": "连接只读 MCP",
+      "instruction": "配置一个只暴露读取操作的本地或测试 MCP 服务。",
+      "done_when": "Claude Code 能列出并调用预期的只读工具。"
+    },
+    "claude-audit-mcp-scope": {
+      "title": "审计 MCP 边界",
+      "instruction": "检查服务范围、凭据、返回数据和不可信输出处理方式。",
+      "done_when": "可用工具和数据没有超出练习声明的范围。"
+    },
+    "claude-inspect-delivery-workflow": {
+      "title": "在本地检查交付工作流",
+      "instruction": "阅读 GitHub Actions 工作流，追踪触发器、权限、输入和预期检查。",
+      "done_when": "执行路径和高权限步骤已识别，且未运行远程工作流。"
+    },
+    "claude-verify-no-remote-write": {
+      "title": "确认远程写入边界",
+      "instruction": "列出所有可能评论、推送、发布、部署或改变远程状态的步骤。",
+      "done_when": "每个远程写入都有明确授权要求，且本练习未执行任何一项。"
+    }
+  }
+}

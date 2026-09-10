@@ -1,96 +1,134 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { withMermaid } from 'vitepress-plugin-mermaid'
-import { createSearchRenderer } from './search-render.mjs'
+import { AI_CATEGORIES, classifyAiSource } from './ai-taxonomy.mjs'
+import {
+  AI_MINISEARCH_OPTIONS,
+  AI_MINISEARCH_SEARCH_OPTIONS,
+  validateAiSearchConcepts,
+} from './search-concepts.mjs'
+import {
+  buildLearningSearchMarkdown,
+  createSearchRenderer,
+} from './search-render.mjs'
 
 type AiSource = {
+  id: string
   product: 'claude-code' | 'codex'
   slug: string
   title: string
   section: string
 }
 
-const AI_SOURCES = (JSON.parse(
+type AiLanguage = 'en' | 'zh-CN'
+type LearningPath = Parameters<typeof buildLearningSearchMarkdown>[0]
+type LearningCopy = Parameters<typeof buildLearningSearchMarkdown>[1]
+
+const sourceManifest = JSON.parse(
   readFileSync(new URL('../../source-ai/sources.yaml', import.meta.url), 'utf8'),
-) as AiSource[]).map((source) => ({
-  ...source,
-  translated: existsSync(
-    new URL(
-      `../../source-ai/content/zh-CN/${source.product}/${source.slug}.md`,
-      import.meta.url,
-    ),
-  ),
-}))
+) as AiSource[]
 
-const HAS_AI_TRANSLATIONS = AI_SOURCES.some((source) => source.translated)
-
-const aiSection = (source: AiSource) => {
-  if (source.product === 'codex') return source.section
-  const topic = source.slug.split('/')[0] ?? source.slug
-  return source.slug.includes('/')
-    ? topic
-        .split('-')
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(' ')
-    : 'Claude Code'
+const readChineseTitle = (source: AiSource) => {
+  const url = new URL(
+    `../../source-ai/content/zh-CN/${source.product}/${source.slug}.md`,
+    import.meta.url,
+  )
+  if (!existsSync(url)) return undefined
+  const match = /^title:\s*(.+)$/mu.exec(readFileSync(url, 'utf8'))
+  return match?.[1]?.trim()
 }
 
-const aiLanguageItems = (language: 'en' | 'zh-CN') =>
-  (['claude-code', 'codex'] as const).map((product) => {
-    const productSources = AI_SOURCES.filter(
-      (source) =>
-        source.product === product && (language === 'en' || source.translated),
-    )
-    const sections = [...new Set(productSources.map(aiSection))]
-    return {
+const AI_SOURCES = sourceManifest.map((source) => {
+  const chineseTitle = readChineseTitle(source)
+  return {
+    ...source,
+    translated: chineseTitle !== undefined,
+    chineseTitle,
+  }
+})
+
+validateAiSearchConcepts(AI_SOURCES.map((source) => source.id))
+
+const escapeHtml = (value: string) =>
+  value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+
+const aiSourceRoute = (
+  source: (typeof AI_SOURCES)[number],
+  language: AiLanguage,
+) =>
+  `/ai/${
+    language === 'zh-CN' && source.translated ? 'zh-CN' : 'en'
+  }/${source.product}/${source.slug}`
+
+const aiRouteForId = (sourceId: string, language: AiLanguage) => {
+  const source = AI_SOURCES.find((candidate) => candidate.id === sourceId)
+  if (source === undefined) {
+    throw new Error(`Unknown AI source route: ${sourceId}`)
+  }
+  return aiSourceRoute(source, language)
+}
+
+const aiSidebarTitle = (
+  source: (typeof AI_SOURCES)[number],
+  language: AiLanguage,
+) => {
+  if (language === 'en') return escapeHtml(source.title)
+  if (source.translated) {
+    return escapeHtml(source.chineseTitle ?? source.title)
+  }
+  return `${escapeHtml(source.title)} <span class="ai-sidebar-fallback">EN</span>`
+}
+
+const aiProductSidebar = (
+  product: AiSource['product'],
+  language: AiLanguage,
+) => {
+  const sources = AI_SOURCES.filter((source) => source.product === product)
+  return [
+    {
       text: product === 'claude-code' ? 'Claude Code' : 'Codex',
-      collapsed: true,
-      items: sections.map((section) => ({
-        text: section,
-        collapsed: true,
-        items: productSources
-          .filter((source) => aiSection(source) === section)
-          .map((source) => ({
-            text: source.title,
-            link: `/ai/${language}/${source.product}/${source.slug}`,
-          })),
-      })),
-    }
-  })
-
-const AI_SIDEBAR = [
-  ...(HAS_AI_TRANSLATIONS
-    ? [
-        { text: 'Claude Code 学习路径', link: '/ai/zh-CN/learn/claude-code' },
-        { text: 'Codex 学习路径', link: '/ai/zh-CN/learn/codex' },
-      ]
-    : []),
-  {
-    text: 'English',
-    collapsed: true,
-    items: aiLanguageItems('en'),
-  },
-  ...(HAS_AI_TRANSLATIONS
-    ? [
+      items: [
         {
-          text: '中文',
-          collapsed: true,
-          items: aiLanguageItems('zh-CN'),
+          text: language === 'zh-CN' ? '学习路径' : 'Learning path',
+          link: `/ai/learn/${product}`,
         },
-      ]
-    : []),
-]
+      ],
+    },
+    ...AI_CATEGORIES.map((category) => ({
+      text: category.labels[language],
+      collapsed: true,
+      items: sources
+        .filter((source) => classifyAiSource(source) === category.id)
+        .map((source) => ({
+          text: aiSidebarTitle(source, language),
+          link: aiSourceRoute(source, language),
+        })),
+    })).filter((category) => category.items.length > 0),
+  ]
+}
 
-const AI_DOC_SIDEBAR = [
-  {
-    text: 'AI 教程及文档',
-    items: [{ text: '首页', link: '/' }],
-  },
-  {
-    text: '官方文档',
-    collapsed: false,
-    items: AI_SIDEBAR,
-  },
-]
+const readLearningJson = <T,>(name: string) =>
+  JSON.parse(
+    readFileSync(
+      new URL(`../../source-ai/learning/${name}.json`, import.meta.url),
+      'utf8',
+    ),
+  ) as T
+
+const AI_LEARNING_SEARCH_PAGES = Object.fromEntries(
+  (['claude-code', 'codex'] as const).map((product) => {
+    const path = readLearningJson<LearningPath>(`${product}.path`)
+    const en = readLearningJson<LearningCopy>(`${product}.en`)
+    const zh = readLearningJson<LearningCopy>(`${product}.zh-CN`)
+    return [
+      `ai/learn/${product}.md`,
+      buildLearningSearchMarkdown(path, en, zh),
+    ]
+  }),
+)
 
 const CAD_SIDEBAR = [
   {
@@ -126,27 +164,7 @@ const CAD_SIDEBAR = [
   },
 ]
 
-const renderAiSearch = createSearchRenderer(true)
-
-// 中文分词器：使用浏览器原生 Intl.Segmenter
-// 支持的浏览器：Chrome 87+, Firefox 125+, Safari 14.1+, Edge 87+
-const chineseTokenize = (text: string) => {
-  if (typeof text !== 'string') return [text]
-  const lower = text.toLowerCase()
-
-  if (typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function') {
-    const segmenter = new Intl.Segmenter('zh-CN', { granularity: 'word' })
-    const tokens: string[] = []
-    for (const seg of segmenter.segment(lower)) {
-      const t = seg.segment.trim()
-      if (t) tokens.push(t)
-    }
-    return tokens
-  }
-
-  // 服务端构建（Node.js）或老浏览器：退化为按空格/标点分词
-  return lower.split(/[\s、：，。；！？/\(\)（）]+/).filter(Boolean)
-}
+const renderAiSearch = createSearchRenderer(true, AI_LEARNING_SEARCH_PAGES)
 
 export default withMermaid({
   title: 'LewisDocs AI 教程及文档',
@@ -210,17 +228,29 @@ export default withMermaid({
       {
         text: 'Claude Code',
         items: [
-          { text: '中文学习路径', link: '/ai/zh-CN/learn/claude-code' },
-          { text: '英文快速入门', link: '/ai/en/claude-code/quickstart' },
-          { text: '英文文档概览', link: '/ai/en/claude-code/overview' },
+          { text: '学习路径', link: '/ai/learn/claude-code' },
+          {
+            text: '快速入门',
+            link: aiRouteForId('claude-code/quickstart', 'zh-CN'),
+          },
+          {
+            text: '文档概览',
+            link: aiRouteForId('claude-code/overview', 'zh-CN'),
+          },
         ],
       },
       {
         text: 'Codex',
         items: [
-          { text: '中文学习路径', link: '/ai/zh-CN/learn/codex' },
-          { text: '英文快速入门', link: '/ai/en/codex/quickstart' },
-          { text: '英文文档概览', link: '/ai/en/codex/overview' },
+          { text: '学习路径', link: '/ai/learn/codex' },
+          {
+            text: '快速入门',
+            link: aiRouteForId('codex/quickstart', 'zh-CN'),
+          },
+          {
+            text: '文档概览',
+            link: aiRouteForId('codex/overview', 'zh-CN'),
+          },
         ],
       },
       {
@@ -236,7 +266,10 @@ export default withMermaid({
     ],
 
     sidebar: {
-      '/ai/': AI_DOC_SIDEBAR,
+      '/ai/en/claude-code/': aiProductSidebar('claude-code', 'en'),
+      '/ai/zh-CN/claude-code/': aiProductSidebar('claude-code', 'zh-CN'),
+      '/ai/en/codex/': aiProductSidebar('codex', 'en'),
+      '/ai/zh-CN/codex/': aiProductSidebar('codex', 'zh-CN'),
       '/appendix/': CAD_SIDEBAR,
       '/theory': CAD_SIDEBAR,
       '/comparison': CAD_SIDEBAR,
@@ -285,15 +318,8 @@ export default withMermaid({
           },
         },
         miniSearch: {
-          options: {
-            tokenize: chineseTokenize,
-            processTerm: (term: string) => term.toLowerCase().trim(),
-          },
-          searchOptions: {
-            fuzzy: 0.2,
-            prefix: true,
-            boost: { title: 4, text: 2, titles: 1 },
-          },
+          options: AI_MINISEARCH_OPTIONS,
+          searchOptions: AI_MINISEARCH_SEARCH_OPTIONS,
         },
         _render: renderAiSearch,
       },

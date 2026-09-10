@@ -1,0 +1,137 @@
+{
+  "version": 1,
+  "product": "claude-code",
+  "stages": [
+    {
+      "id": "first-controlled-task",
+      "source_ids": [
+        "claude-code/quickstart"
+      ],
+      "tasks": [
+        {
+          "id": "claude-explore-read-only",
+          "kind": "practice"
+        },
+        {
+          "id": "claude-verify-first-change",
+          "kind": "verify"
+        }
+      ]
+    },
+    {
+      "id": "project-context",
+      "source_ids": [
+        "claude-code/memory",
+        "claude-code/best-practices"
+      ],
+      "tasks": [
+        {
+          "id": "claude-create-project-context",
+          "kind": "practice"
+        },
+        {
+          "id": "claude-verify-context-source",
+          "kind": "verify"
+        }
+      ]
+    },
+    {
+      "id": "permissions-and-sandbox",
+      "source_ids": [
+        "claude-code/permissions",
+        "claude-code/sandboxing"
+      ],
+      "tasks": [
+        {
+          "id": "claude-classify-operation-boundaries",
+          "kind": "practice"
+        },
+        {
+          "id": "claude-verify-denied-operation",
+          "kind": "verify"
+        }
+      ]
+    },
+    {
+      "id": "implementation-loop",
+      "source_ids": [
+        "claude-code/common-workflows",
+        "claude-code/code-review"
+      ],
+      "tasks": [
+        {
+          "id": "claude-complete-implementation-loop",
+          "kind": "practice"
+        },
+        {
+          "id": "claude-review-diff-and-tests",
+          "kind": "verify"
+        }
+      ]
+    },
+    {
+      "id": "subagents",
+      "source_ids": [
+        "claude-code/subagents"
+      ],
+      "tasks": [
+        {
+          "id": "claude-delegate-read-only-analysis",
+          "kind": "practice"
+        },
+        {
+          "id": "claude-verify-subagent-boundary",
+          "kind": "verify"
+        }
+      ]
+    },
+    {
+      "id": "hooks",
+      "source_ids": [
+        "claude-code/hooks-guide"
+      ],
+      "tasks": [
+        {
+          "id": "claude-add-reversible-hook",
+          "kind": "practice"
+        },
+        {
+          "id": "claude-verify-hook-behavior",
+          "kind": "verify"
+        }
+      ]
+    },
+    {
+      "id": "mcp",
+      "source_ids": [
+        "claude-code/mcp"
+      ],
+      "tasks": [
+        {
+          "id": "claude-connect-read-only-mcp",
+          "kind": "practice"
+        },
+        {
+          "id": "claude-audit-mcp-scope",
+          "kind": "verify"
+        }
+      ]
+    },
+    {
+      "id": "delivery-automation",
+      "source_ids": [
+        "claude-code/github-actions"
+      ],
+      "tasks": [
+        {
+          "id": "claude-inspect-delivery-workflow",
+          "kind": "practice"
+        },
+        {
+          "id": "claude-verify-no-remote-write",
+          "kind": "verify"
+        }
+      ]
+    }
+  ]
+}

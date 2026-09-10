@@ -1,5 +1,5 @@
 # Copyright 2026
-# ruff: noqa: D103,INP001
+# ruff: noqa: D103,INP001,RUF001
 """Tests for deterministic accepted AI handbook page boundaries."""
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ from scripts.ai.pages import (
     parse_accepted_page,
     render_chinese_page,
     render_english_page,
+    render_official_chinese_page,
     validate_candidate,
     validate_publishable_candidate,
 )
@@ -24,7 +25,10 @@ from scripts.ai.types import NormalizedPage, Source, SourceManifest
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = load_sources(ROOT / "source-ai" / "sources.yaml")
-WARNING = "本页由 AI 翻译，可能存在误差；如有歧义，以英文原文为准。"  # noqa: RUF001
+WARNING = "本页由 AI 翻译，可能存在误差；如有歧义，以英文原文为准。"
+OFFICIAL_NOTICE = (
+    "本页采用内容所有者发布的官方简体中文版本，并与本站对应英文版本进行结构校验。"
+)
 
 
 def _normalized(source: Source) -> NormalizedPage:
@@ -174,25 +178,110 @@ def test_chinese_render_has_warning_official_attribution_and_translated_title(
     assert page.translation_of == source.id  # noqa: S101
     assert page.translation_model == "k3"  # noqa: S101
     assert page.ai_translated is True  # noqa: S101
-    prefix = f"{WARNING}\n\n[Official source]({source.canonical_url})\n\n"
-    prefix += f"Content owner: {source.owner}\n\n"
+    prefix = f"{WARNING}\n\n[官方来源]({source.canonical_url})\n\n"
+    prefix += f"内容所有者: {source.owner}\n\n"
     assert page.body.startswith(prefix)  # noqa: S101
     assert "endorsed" not in page.body.lower()  # noqa: S101
 
 
-def test_chinese_render_records_supported_alternate_translation_model(tmp_path: Path) -> None:
-    """Record GLM attribution without weakening accepted-page metadata."""
+def test_official_chinese_render_has_source_metadata_without_ai_claim(
+    tmp_path: Path,
+) -> None:
+    source = MANIFEST.root[0]
+    normalized = _normalized(source)
+    localized = "# 官方中文标题\n\n简短官方正文。\n"
+    translation_url = source.canonical_url.replace("/docs/en/", "/docs/zh-CN/")
+    path = tmp_path / "page.md"
+    _ = path.write_bytes(
+        render_official_chinese_page(
+            normalized,
+            localized,
+            translation_url=translation_url,
+        )
+    )
+
+    page = parse_accepted_page(path)
+
+    assert page.title == "官方中文标题"  # noqa: S101
+    assert page.translation_of == source.id  # noqa: S101
+    assert page.translation_source == "official"  # noqa: S101
+    assert page.translation_url == translation_url  # noqa: S101
+    assert page.translation_model is None  # noqa: S101
+    assert page.ai_translated is None  # noqa: S101
+    assert page.localization_sha256 == sha256(localized.encode()).hexdigest()  # noqa: S101
+    prefix = f"{OFFICIAL_NOTICE}\n\n[官方中文来源]({translation_url})\n\n"
+    assert page.body.startswith(f"{prefix}内容所有者: {source.owner}\n\n")  # noqa: S101
+    assert WARNING not in page.body  # noqa: S101
+
+
+def test_publishable_candidate_accepts_legacy_english_chinese_attribution(
+    tmp_path: Path,
+) -> None:
+    """Keep already accepted Chinese pages valid while labels migrate."""
+    managed_root, _ = _complete_roots(tmp_path)
+    source = MANIFEST.root[0]
+    path = managed_root / "zh-CN" / source.product / f"{source.slug}.md"
+    payload = path.read_text(encoding="utf-8")
+    payload = payload.replace("[官方来源]", "[Official source]", 1)
+    payload = payload.replace("内容所有者: ", "Content owner: ", 1)
+    _ = path.write_text(payload, encoding="utf-8", newline="\n")
+    _write_learning(managed_root / "learn")
+
+    available = validate_publishable_candidate(
+        managed_root=managed_root,
+        manifest=MANIFEST,
+    )
+
+    assert source.id in available  # noqa: S101
+
+
+def test_publishable_candidate_accepts_structurally_matching_official_chinese(
+    tmp_path: Path,
+) -> None:
+    managed_root, _ = _complete_roots(tmp_path)
+    source = MANIFEST.root[0]
+    translation_url = source.canonical_url.replace("/docs/en/", "/docs/zh-CN/")
+    localized = (
+        f"# {source.title}\n\n"
+        "这是由内容所有者发布的简体中文正文，用于验证官方本地化页面能够通过双语内容边界。"
+        "该段落包含足够的中文内容，并保持与对应英文页面相同的标题层级和 Markdown 结构。"
+        "校验过程还会绑定当前英文内容，防止过期的中文页面被误认为等价版本。\n"
+    )
+    path = managed_root / "zh-CN" / source.product / f"{source.slug}.md"
+    _ = path.write_bytes(
+        render_official_chinese_page(
+            _normalized(source),
+            localized,
+            translation_url=translation_url,
+        )
+    )
+    _write_learning(managed_root / "learn")
+
+    available = validate_publishable_candidate(
+        managed_root=managed_root,
+        manifest=MANIFEST,
+    )
+
+    assert source.id in available  # noqa: S101
+
+
+@pytest.mark.parametrize("translation_model", ["glm-5.2", "gpt-5.6"])
+def test_chinese_render_records_supported_translation_model(
+    tmp_path: Path,
+    translation_model: str,
+) -> None:
+    """Record current and historical producer attribution in accepted metadata."""
     source = MANIFEST.root[0]
     path = tmp_path / "page.md"
     _ = path.write_bytes(
         render_chinese_page(
             _normalized(source),
             _translated(source),
-            translation_model="glm-5.2",
+            translation_model=translation_model,
         )
     )
 
-    assert parse_accepted_page(path).translation_model == "glm-5.2"  # noqa: S101
+    assert parse_accepted_page(path).translation_model == translation_model  # noqa: S101
 
 
 def test_chinese_render_rejects_missing_translated_h1() -> None:

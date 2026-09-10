@@ -101,15 +101,13 @@ def _expected_routes(
     translated: frozenset[str],
 ) -> frozenset[str]:
     english = tuple(f"/ai/en/{source.product}/{source.slug}" for source in manifest.root)
-    if not translated:
-        return frozenset(english)
     chinese = tuple(
         f"/ai/zh-CN/{source.product}/{source.slug}"
         for source in manifest.root
         if source.id in translated
     )
     return frozenset(
-        (*english, *chinese, "/ai/zh-CN/learn/claude-code", "/ai/zh-CN/learn/codex")
+        (*english, *chinese, "/ai/learn/claude-code", "/ai/learn/codex")
     )
 
 
