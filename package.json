@@ -13,14 +13,16 @@
     "link-citations": "python scripts/link_citations.py",
     "prepare-content": "npm run import && npm run rewrite && npm run link-citations && node scripts/ai_content_gate.mjs prepare",
     "ai:sync": "node scripts/run_ai_python.mjs --ai -- -m scripts.ai.cli sync",
+    "test:ai:node": "node --test tests/ai/node/*.test.mjs",
     "typecheck": "tsc -p tsconfig.json",
-    "lint:ts": "biome check docs/.vitepress/config.ts docs/.vitepress/search-render.mjs docs/.vitepress/theme/index.ts docs/.vitepress/theme/components/AiLanguageSwitch.vue tests/ai/node/search-render.test.mjs"
+    "lint:ts": "biome check docs/.vitepress/ai-state.mjs docs/.vitepress/ai-taxonomy.mjs docs/.vitepress/config.ts docs/.vitepress/search-concepts.mjs docs/.vitepress/search-render.mjs docs/.vitepress/theme/index.ts docs/.vitepress/theme/components/AiLanguageSwitch.vue docs/.vitepress/theme/components/AiLearningPath.vue docs/.vitepress/theme/components/AiProductSwitch.vue tests/ai/node"
   },
   "devDependencies": {
-    "@floating-ui/vue": "^1.1.11",
     "@biomejs/biome": "2.5.5",
+    "@floating-ui/vue": "^1.1.11",
     "@types/node": "20.19.43",
     "mermaid": "^11.14.0",
+    "minisearch": "7.2.0",
     "typescript": "7.0.2",
     "vitepress": "^1.5.0",
     "vitepress-plugin-mermaid": "^2.0.17"

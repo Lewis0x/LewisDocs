@@ -5,7 +5,7 @@ product: claude-code
 lang: en
 canonical_url: https://code.claude.com/docs/en/agent-sdk/structured-outputs
 owner: Anthropic
-content_sha256: 74d557b7cc219b110ca577dd2e26c368d08cd577c0af8ea47ef3964370ee5c1b
+content_sha256: a3f916716cf737c89a04d13860922f86fde11310437fe87e8de1262334e6a08d
 ---
 [Official source](https://code.claude.com/docs/en/agent-sdk/structured-outputs)
 
@@ -444,11 +444,9 @@ A result can also end with subtype `success` but no `structured_output` value, f
       }
     }
   } catch (error) {
-    // A single-shot query() throws after yielding an error result.
-    // If the failure was an error result, the subtype branches above
-    // have already run; connection or process failures yield no result
-    // message. Handle the failure here - retry with a simpler prompt,
-    // fall back to unstructured, etc.
+    // A single-shot query() throws after yielding an error result. If the
+    // failure was an error result, the error subtype branches above have
+    // already run; connection or process failures yield no result message.
     console.log(`Session ended with an error: ${error}`);
   }
   ```
@@ -484,11 +482,9 @@ A result can also end with subtype `success` but no `structured_output` value, f
                   else:
                       print("Run ended without a structured output")
       except Exception as error:
-          # A single-shot query() raises after yielding an error result.
-          # If the failure was an error result, the subtype branches above
-          # have already run; connection or process failures yield no
-          # result message. Handle the failure here - retry with a simpler
-          # prompt, fall back to unstructured, etc.
+          # A single-shot query() raises after yielding an error result. If the
+          # failure was an error result, the error subtype branches above have
+          # already run; connection or process failures yield no result message.
           print(f"Session ended with an error: {error}")
 
 

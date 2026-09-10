@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "provider": "Anthropic",
+  "locale": "zh-CN",
+  "validation_policy": "strict-current-content",
+  "source_ids": [
+    "claude-code/quickstart",
+    "claude-code/memory",
+    "claude-code/permissions",
+    "claude-code/how-it-works",
+    "claude-code/common-workflows",
+    "claude-code/hooks-guide",
+    "claude-code/mcp",
+    "claude-code/subagents",
+    "claude-code/accessibility",
+    "claude-code/admin-setup",
+    "claude-code/advisor",
+    "claude-code/agent-sdk/agent-loop",
+    "claude-code/agent-sdk/claude-code-features",
+    "claude-code/agent-sdk/cost-tracking",
+    "claude-code/agent-sdk/custom-tools",
+    "claude-code/agent-sdk/file-checkpointing",
+    "claude-code/agent-sdk/hooks",
+    "claude-code/agent-sdk/hosting",
+    "claude-code/agent-sdk/mcp",
+    "claude-code/agent-sdk/modifying-system-prompts"
+  ]
+}

@@ -7,11 +7,12 @@ import shutil
 from dataclasses import replace
 from hashlib import sha256
 from pathlib import Path
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
 from pydantic import TypeAdapter
+from typing_extensions import TypedDict
 
 from scripts.ai.cad_paths import iter_cad_markdown
 from scripts.ai.errors import AIAgentError, ErrorCode
@@ -35,7 +36,7 @@ QUERY_PATH = ROOT / "tests" / "ai" / "fixtures" / "browser-queries.json"
 SOURCE_IDS = tuple(str(source.id) for source in load_sources(MANIFEST_PATH).root)
 ROUTES = frozenset(
     f"/ai/{language}/{source_id}" for source_id in SOURCE_IDS for language in ("en", "zh-CN")
-) | frozenset(("/ai/zh-CN/learn/claude-code", "/ai/zh-CN/learn/codex"))
+) | frozenset(("/ai/learn/claude-code", "/ai/learn/codex"))
 
 
 class _SearchQuery(TypedDict):
@@ -95,14 +96,19 @@ def test_ac1_ac2_ac7_exact_pairs_routes_links_learning_and_cad(tmp_path: Path) -
             repository / "docs" / "ai" / f"{zh[4:]}.md"
         ).read_text(encoding="utf-8")
     for product in ("claude-code", "codex"):
-        links = (private / "learn" / "zh-CN" / f"{product}.md").read_text(encoding="utf-8")
-        expected_count = sum(source.product == product for source in manifest.root)
-        assert links.count("](/ai/zh-CN/") == expected_count
-        assert all(
-            f"/ai/zh-CN/{product}/{source.slug}" in links
-            for source in manifest.root
-            if source.product == product
-        )
+        learning = (
+            repository / "docs" / "ai" / "learn" / f"{product}.md"
+        ).read_text(encoding="utf-8")
+        assert f'<AiLearningPath product="{product}" />' in learning
+        assert "ai_learning: true" in learning
+        assert not (
+            repository
+            / "docs"
+            / "ai"
+            / "zh-CN"
+            / "learn"
+            / f"{product}.md"
+        ).exists()
     fixture = TypeAdapter(_BrowserQueries).validate_python(
         json.loads(QUERY_PATH.read_text(encoding="utf-8"))
     )
@@ -164,8 +170,12 @@ def test_materialize_allows_complete_english_preview_without_dead_counterparts(
         MaterializeOptions(repository, private, repository / "docs" / "ai", MANIFEST_PATH)
     )
 
-    assert len(routes) == len(SOURCE_IDS)
-    assert all(route.lang == "en" and route.counterpart is None for route in routes)
+    assert len(routes) == len(SOURCE_IDS) + 2
+    assert all(
+        route.lang == "en" and route.counterpart is None
+        for route in routes
+        if route.source_id is not None
+    )
     for source in manifest.root:
         page = repository / "docs" / "ai" / "en" / source.product / f"{source.slug}.md"
         assert page.is_file()

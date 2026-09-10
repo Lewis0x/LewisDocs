@@ -7,6 +7,7 @@ from scripts.ai.page_format import (
     parse_accepted_page,
     render_chinese_page,
     render_english_page,
+    render_official_chinese_page,
 )
 from scripts.ai.page_validation import (
     validate_candidate,
@@ -19,6 +20,7 @@ __all__ = (
     "parse_accepted_page",
     "render_chinese_page",
     "render_english_page",
+    "render_official_chinese_page",
     "validate_candidate",
     "validate_english_candidate",
     "validate_publishable_candidate",

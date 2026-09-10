@@ -21,11 +21,12 @@ from scripts.ai.fetch import fetch_source
 from scripts.ai.http_client import create_http_client
 from scripts.ai.manifest import load_sources
 from scripts.ai.normalize import normalize_source
-from scripts.ai.page_format import WARNING
+from scripts.ai.page_format import OFFICIAL_LOCALIZATION_NOTICE, WARNING
 from scripts.ai.pages import (
     parse_accepted_page,
     render_chinese_page,
     render_english_page,
+    render_official_chinese_page,
     validate_publishable_candidate,
 )
 from scripts.ai.types import NormalizedPage
@@ -174,7 +175,7 @@ def _semantic_content(markdown: str) -> str:
     return _WHITESPACE_RE.sub(" ", text).strip()
 
 
-def _preserved_translation(
+def _preserved_translation(  # noqa: C901, PLR0911
     content: Path,
     page: NormalizedPage,
 ) -> bytes | None:
@@ -195,17 +196,39 @@ def _preserved_translation(
         and chinese.owner == page.source.owner
         and chinese.translation_of == page.source.id
     )
-    if not metadata_matches or chinese.translation_model is None:
+    if not metadata_matches:
         return None
     english_prefix = (
         f"[Official source]({page.source.canonical_url})\n\n"
         f"Content owner: {page.source.owner}\n\n"
     )
-    chinese_prefix = f"{WARNING}\n\n{english_prefix}"
-    if not english.body.startswith(english_prefix) or not chinese.body.startswith(chinese_prefix):
+    if not english.body.startswith(english_prefix):
         return None
     previous_markdown = english.body.removeprefix(english_prefix)
     if _semantic_content(previous_markdown) != _semantic_content(page.markdown):
+        return None
+    if chinese.translation_source == "official":
+        if chinese.translation_url is None or chinese.localization_sha256 is None:
+            return None
+        official_prefix = (
+            f"{OFFICIAL_LOCALIZATION_NOTICE}\n\n"
+            f"[官方中文来源]({chinese.translation_url})\n\n"
+            f"内容所有者: {page.source.owner}\n\n"
+        )
+        if not chinese.body.startswith(official_prefix):
+            return None
+        localized = chinese.body.removeprefix(official_prefix)
+        if sha256(localized.encode("utf-8")).hexdigest() != chinese.localization_sha256:
+            return None
+        return render_official_chinese_page(
+            page,
+            localized,
+            translation_url=chinese.translation_url,
+        )
+    if chinese.translation_model is None:
+        return None
+    chinese_prefix = f"{WARNING}\n\n{english_prefix}"
+    if not chinese.body.startswith(chinese_prefix):
         return None
     translated = chinese.body.removeprefix(chinese_prefix)
     return render_chinese_page(

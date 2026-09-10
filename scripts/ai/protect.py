@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Final, NoReturn, TypeAlias
 
 from scripts.ai.errors import AIAgentError, ErrorCode, TranslationFailureReason
+from scripts.ai.review_contract import parse_markdown_fences
 
 _TOKEN_TEMPLATE: Final = "@@LEWISDOCS_{index:04d}@@"  # noqa: S105
 _TOKEN_RE: Final = re.compile(r"@@LEWISDOCS_\d{4}@@")
@@ -21,10 +22,13 @@ _OUTER_MARKDOWN_FENCE_RE: Final = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
-_FENCE_RE: Final = re.compile(r"(?ms)^(?P<mark>`{3,}|~{3,})[^\n]*\n.*?^(?P=mark)[ \t]*(?:\n|$)")
+_FENCE_RE: Final = re.compile(
+    r"(?ms)^(?P<indent>[ \t]*)(?P<mark>`{3,}|~{3,})[^\r\n]*\r?\n"
+    r".*?^(?P=indent)(?P=mark)[ \t]*(?:\r?\n|$)"
+)
 _INLINE_CODE_RE: Final = re.compile(r"`[^`\n]+`")
 _LINK_RE: Final = re.compile(r"!?\[[^\]\n]*\]\((?P<target>[^)\s]+)\)")
-_URL_RE: Final = re.compile(r"https?://[^\s<>()\]]+")
+_URL_RE: Final = re.compile(r"""https?://[^\s<>()\]"']+""")
 _COMMAND_RE: Final = re.compile(r"npm run ai:sync")
 _OPTION_RE: Final = re.compile(r"--[a-z0-9][a-z0-9-]*")
 _IDENTIFIER_RE: Final = re.compile(
@@ -65,6 +69,92 @@ class ProtectedMarkdown:
 
     text: str
     spans: tuple[ProtectedSpan, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class FencedBlockRestoration:
+    """Deterministic result of restoring source fenced blocks."""
+
+    text: str
+    block_count: int
+    changed_count: int
+
+
+def restore_fenced_blocks(
+    source: str,
+    candidate: str,
+) -> FencedBlockRestoration:
+    """Restore executable fences while preserving translated reader-facing prose."""
+    try:
+        source_fences = parse_markdown_fences(source)
+    except ValueError as error:
+        message = f"invalid source fenced block: {error}"
+        raise ValueError(message) from error
+    try:
+        candidate_fences = parse_markdown_fences(candidate)
+    except ValueError as error:
+        message = f"invalid candidate fenced block: {error}"
+        raise ValueError(message) from error
+    if len(source_fences) != len(candidate_fences):
+        message = (
+            "source and candidate fenced block counts differ: "
+            f"{len(source_fences)} != {len(candidate_fences)}"
+        )
+        raise ValueError(message)
+
+    replacements: list[tuple[int, int, str]] = []
+    expected_blocks: list[str] = []
+    changed_count = 0
+    for index, (source_fence, candidate_fence) in enumerate(
+        zip(source_fences, candidate_fences, strict=True)
+    ):
+        source_opening = source[source_fence.start : source_fence.content_start]
+        candidate_opening = candidate[
+            candidate_fence.start : candidate_fence.content_start
+        ]
+        source_closing = source[source_fence.content_end : source_fence.end]
+        candidate_closing = candidate[
+            candidate_fence.content_end : candidate_fence.end
+        ]
+        if (
+            source_opening != candidate_opening
+            or source_closing != candidate_closing
+            or source_fence.language != candidate_fence.language
+        ):
+            message = (
+                "source and candidate fenced block marker or language differs "
+                f"at index {index}"
+            )
+            raise ValueError(message)
+
+        source_block = source[source_fence.start : source_fence.end]
+        candidate_block = candidate[candidate_fence.start : candidate_fence.end]
+        expected_block = (
+            candidate_block if source_fence.reader_facing else source_block
+        )
+        expected_blocks.append(expected_block)
+        if not source_fence.reader_facing and source_block != candidate_block:
+            changed_count += 1
+            replacements.append(
+                (candidate_fence.start, candidate_fence.end, source_block)
+            )
+
+    restored = candidate
+    for start, end, replacement in reversed(replacements):
+        restored = restored[:start] + replacement + restored[end:]
+
+    restored_fences = parse_markdown_fences(restored)
+    restored_blocks = tuple(
+        restored[fence.start : fence.end] for fence in restored_fences
+    )
+    if restored_blocks != tuple(expected_blocks):
+        message = "restored fenced blocks do not match the expected policy"
+        raise ValueError(message)
+    return FencedBlockRestoration(
+        text=restored,
+        block_count=len(source_fences),
+        changed_count=changed_count,
+    )
 
 
 def protect_markdown(markdown: str) -> ProtectedMarkdown:
@@ -113,6 +203,16 @@ def restore_and_validate(
     if _literal_signature(source) != _literal_signature(restored):
         _fail(TranslationFailureReason.OUTPUT_LITERAL_INVALID)
     return restored
+
+
+def markdown_literal_signature(markdown: str) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    """Return protected Markdown literals grouped by kind for exact comparison."""
+    return _literal_signature(markdown)
+
+
+def markdown_structure_signature(markdown: str) -> StructureSignature:
+    """Return the translation-safe Markdown structure signature."""
+    return _structure_signature(markdown)
 
 
 def _unwrap_outer_markdown_fence(translated: str) -> str:

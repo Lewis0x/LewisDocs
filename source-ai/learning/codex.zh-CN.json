@@ -1,0 +1,115 @@
+{
+  "version": 1,
+  "product": "codex",
+  "title": "Codex 学习路径",
+  "summary": "通过受控仓库任务、明确的项目指令和可验证的工程闭环掌握 Codex。",
+  "stages": {
+    "first-controlled-task": {
+      "title": "完成首次受控任务",
+      "objective": "理解上下文和提示方式如何影响一个小范围、可观察的 Codex 任务。",
+      "risk": "从练习仓库开始，避免凭据、发布、部署和远程写入。"
+    },
+    "project-instructions": {
+      "title": "建立项目级指令",
+      "objective": "通过正确的 AGENTS.md 层级，让稳定的仓库约束可被发现。",
+      "risk": "指令应范围明确、可测试，并且不包含密钥或临时任务细节。"
+    },
+    "approvals-and-sandbox": {
+      "title": "理解审批与沙箱",
+      "objective": "识别 Codex 可以继续执行以及必须为高风险操作请求许可的边界。",
+      "risk": "外部写入、凭据、破坏性命令和越过沙箱都需要审慎检查。"
+    },
+    "implementation-loop": {
+      "title": "闭合实现循环",
+      "objective": "从仓库检查推进到聚焦编辑、测试、diff 检查和代码审查。",
+      "risk": "不要只接受完成声明，应检查行为变化和真实证据。"
+    },
+    "mcp": {
+      "title": "连接只读 MCP 服务",
+      "objective": "在已知边界内使用 MCP 集成的工具、数据和认证。",
+      "risk": "把工具输出视为不可信输入，启用写操作前逐项检查能力。"
+    },
+    "skills-and-plugins": {
+      "title": "封装可复用能力",
+      "objective": "把一个重复流程整理为触发条件清晰、文档完整的小型 Skill 或插件。",
+      "risk": "保持权限最小，不要在自动化中隐藏远程变更或凭据。"
+    },
+    "cloud-and-ci": {
+      "title": "理解云任务与 CI",
+      "objective": "追踪本地意图如何变成云任务或 CI 作业，同时不执行未经授权的写入。",
+      "risk": "仓库令牌、评论、提交、拉取请求、发布和部署都需要明确授权。"
+    }
+  },
+  "tasks": {
+    "codex-explore-read-only": {
+      "title": "只读探索仓库",
+      "instruction": "让 Codex 识别仓库结构、生效指引和最窄的有效测试命令。",
+      "done_when": "回答引用了具体文件，且工作区保持不变。"
+    },
+    "codex-improve-first-prompt": {
+      "title": "改进首次提示",
+      "instruction": "把含糊请求改写为目标、范围、约束和验证标准明确的提示。",
+      "done_when": "Codex 能准确复述任务，并完成一项没有范围漂移的小型验证修改。"
+    },
+    "codex-create-project-guidance": {
+      "title": "编写项目指令",
+      "instruction": "在合适的 AGENTS.md 文件中添加一条稳定、可测试的仓库规则。",
+      "done_when": "规则简洁，目录作用域没有歧义。"
+    },
+    "codex-verify-guidance-discovery": {
+      "title": "验证指令发现顺序",
+      "instruction": "发起新任务，让 Codex 列出生效的项目指令及其来源。",
+      "done_when": "输出与仓库中的指令层级一致。"
+    },
+    "codex-classify-operation-boundaries": {
+      "title": "划分操作边界",
+      "instruction": "把示例操作分为读取、本地写入、命令执行、外部写入和破坏性操作。",
+      "done_when": "每项操作都有合理的沙箱和审批预期。"
+    },
+    "codex-verify-approval-path": {
+      "title": "验证审批路径",
+      "instruction": "使用无害练习观察 Codex 何时继续、询问或拒绝。",
+      "done_when": "预期边界清晰可见，且没有未经授权的副作用。"
+    },
+    "codex-complete-implementation-loop": {
+      "title": "完成一次聚焦实现",
+      "instruction": "让 Codex 检查、编辑并测试一个范围明确的行为。",
+      "done_when": "目标行为正常，相关检查通过。"
+    },
+    "codex-review-diff-and-tests": {
+      "title": "复核 diff 与测试",
+      "instruction": "检查 diff 和测试输出，再执行一次面向回归的代码审查。",
+      "done_when": "意外修改已移除，剩余风险被明确说明。"
+    },
+    "codex-connect-read-only-mcp": {
+      "title": "连接只读 MCP",
+      "instruction": "配置只暴露本练习所需读取能力的本地或测试 MCP 服务。",
+      "done_when": "Codex 只列出并调用预期的只读工具。"
+    },
+    "codex-audit-mcp-scope": {
+      "title": "审计 MCP 边界",
+      "instruction": "检查工具 schema、凭据、返回数据和不可信输出处理方式。",
+      "done_when": "集成没有暴露超出声明范围的能力或数据。"
+    },
+    "codex-package-repeatable-workflow": {
+      "title": "封装重复流程",
+      "instruction": "选择一个小型重复流程，把它表达为有文档的 Skill 或插件。",
+      "done_when": "该能力具有清晰的触发条件、输入、输出和所有权边界。"
+    },
+    "codex-verify-reusable-capability": {
+      "title": "验证可复用能力",
+      "instruction": "在受控示例中运行该能力，并检查产生的每一项变化。",
+      "done_when": "行为可预测、无关文件未受影响，所需权限有明确说明。"
+    },
+    "codex-inspect-cloud-ci-flow": {
+      "title": "检查云任务与 CI 流程",
+      "instruction": "在不启动远程作业的前提下，追踪任务输入、环境、权限、检查和输出。",
+      "done_when": "执行路径和全部高权限步骤均已识别。"
+    },
+    "codex-verify-no-remote-write": {
+      "title": "确认远程写入边界",
+      "instruction": "列出所有可能评论、推送、创建拉取请求、发布或部署的操作。",
+      "done_when": "每个远程写入都有明确授权点，且本练习未执行任何一项。"
+    }
+  }
+}

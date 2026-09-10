@@ -1,4 +1,45 @@
-export function createSearchRenderer(includeAiHandbook) {
+export function buildLearningSearchMarkdown(path, en, zh) {
+  const lines = [
+    `# ${zh.title} / ${en.title}`,
+    '',
+    zh.summary,
+    '',
+    en.summary,
+  ]
+  for (const stage of path.stages) {
+    const zhStage = zh.stages[stage.id]
+    const enStage = en.stages[stage.id]
+    lines.push(
+      '',
+      `## ${zhStage.title} / ${enStage.title} {#stage-${stage.id}}`,
+      '',
+      zhStage.objective,
+      '',
+      enStage.objective,
+      '',
+      stage.source_ids.join(' '),
+    )
+    for (const task of stage.tasks) {
+      const zhTask = zh.tasks[task.id]
+      const enTask = en.tasks[task.id]
+      lines.push(
+        '',
+        `### ${zhTask.title} / ${enTask.title}`,
+        '',
+        zhTask.instruction,
+        '',
+        enTask.instruction,
+        '',
+        zhTask.done_when,
+        '',
+        enTask.done_when,
+      )
+    }
+  }
+  return `${lines.join('\n')}\n`
+}
+
+export function createSearchRenderer(includeAiHandbook, learningPages = {}) {
   return (src, env, md) => {
     const html = md.render(src, env)
     if (
@@ -9,13 +50,14 @@ export function createSearchRenderer(includeAiHandbook) {
     }
     if (!includeAiHandbook || !env.relativePath.startsWith('ai/')) return html
 
+    const learningPage = learningPages[env.relativePath]
+    if (typeof learningPage === 'string') {
+      return md.render(learningPage, env)
+    }
+
     const frontmatterTitle = env.frontmatter?.title
-    const learningTitle = env.relativePath.endsWith('/learn/claude-code.md')
-      ? '中文 · Claude Code 学习路径'
-      : env.relativePath.endsWith('/learn/codex.md')
-        ? '中文 · Codex 学习路径'
-        : undefined
-    const title = typeof frontmatterTitle === 'string' ? frontmatterTitle : learningTitle
+    const title =
+      typeof frontmatterTitle === 'string' ? frontmatterTitle : undefined
     if (title === undefined) return html
 
     const titledSource = src.replace(/^#\s+.+$/m, `# ${title}`)

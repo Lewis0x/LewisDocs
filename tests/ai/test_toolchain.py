@@ -44,9 +44,12 @@ PREPARE_SCRIPT = (
     "node scripts/ai_content_gate.mjs prepare"
 )
 LINT_TS_SCRIPT = (
-    "biome check docs/.vitepress/config.ts docs/.vitepress/search-render.mjs "
-    "docs/.vitepress/theme/index.ts docs/.vitepress/theme/components/AiLanguageSwitch.vue "
-    "tests/ai/node/search-render.test.mjs"
+    "biome check docs/.vitepress/ai-state.mjs docs/.vitepress/ai-taxonomy.mjs "
+    "docs/.vitepress/config.ts docs/.vitepress/search-concepts.mjs "
+    "docs/.vitepress/search-render.mjs docs/.vitepress/theme/index.ts "
+    "docs/.vitepress/theme/components/AiLanguageSwitch.vue "
+    "docs/.vitepress/theme/components/AiLearningPath.vue "
+    "docs/.vitepress/theme/components/AiProductSwitch.vue tests/ai/node"
 )
 
 
@@ -117,6 +120,7 @@ def test_package_contract() -> None:
     assert dev_deps["@biomejs/biome"] == "2.5.5"
     assert dev_deps["typescript"] == "7.0.2"
     assert dev_deps["@types/node"] == "20.19.43"
+    assert dev_deps["minisearch"] == "7.2.0"
     assert "tsx" not in dev_deps
     assert "@cloudflare/workers-types" not in dev_deps
     assert "playwright-core" not in dev_deps
@@ -125,7 +129,7 @@ def test_package_contract() -> None:
 def test_public_handbook_is_unconditional_and_sync_workflow_is_manual() -> None:
     config = VITEPRESS_CONFIG.read_text(encoding="utf-8")
     assert "INCLUDE_AI_HANDBOOK" not in config
-    assert "createSearchRenderer(true)" in config
+    assert "createSearchRenderer(true, AI_LEARNING_SEARCH_PAGES)" in config
 
     workflow = AI_SYNC_WORKFLOW.read_text(encoding="utf-8")
     assert "workflow_dispatch:" in workflow

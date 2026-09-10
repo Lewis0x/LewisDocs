@@ -25,19 +25,19 @@ def _routes(
 ) -> tuple[str, ...]:
     manifest = load_sources(MANIFEST_PATH)
     english = tuple(f"/ai/en/{source.product}/{source.slug}" for source in manifest.root)
-    if not bilingual:
-        return english
     translated = (
         frozenset(str(source.id) for source in manifest.root)
-        if translated_ids is None
+        if bilingual and translated_ids is None
         else translated_ids
+        if translated_ids is not None
+        else frozenset()
     )
     chinese = tuple(
         f"/ai/zh-CN/{source.product}/{source.slug}"
         for source in manifest.root
         if source.id in translated
     )
-    return (*english, *chinese, "/ai/zh-CN/learn/claude-code", "/ai/zh-CN/learn/codex")
+    return (*english, *chinese, "/ai/learn/claude-code", "/ai/learn/codex")
 
 
 def _install_dist(dist: Path, routes: tuple[str, ...], *, labels: bool = True) -> None:
@@ -120,7 +120,7 @@ def test_verify_dist_accepts_exact_html_and_search_inventory(tmp_path: Path) -> 
 
 
 def test_verify_dist_accepts_exact_english_preview_inventory(tmp_path: Path) -> None:
-    """Accept exactly ten English routes when translated content is not present."""
+    """Accept English source routes plus the two canonical learning paths."""
     options = _options(tmp_path, bilingual=False)
     routes = _routes(bilingual=False)
     _install_dist(options.dist_root, routes)

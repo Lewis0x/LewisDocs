@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "product": "codex",
+  "stages": [
+    {
+      "id": "first-controlled-task",
+      "source_ids": [
+        "codex/quickstart",
+        "codex/prompting"
+      ],
+      "tasks": [
+        {
+          "id": "codex-explore-read-only",
+          "kind": "practice"
+        },
+        {
+          "id": "codex-improve-first-prompt",
+          "kind": "verify"
+        }
+      ]
+    },
+    {
+      "id": "project-instructions",
+      "source_ids": [
+        "codex/agents-md"
+      ],
+      "tasks": [
+        {
+          "id": "codex-create-project-guidance",
+          "kind": "practice"
+        },
+        {
+          "id": "codex-verify-guidance-discovery",
+          "kind": "verify"
+        }
+      ]
+    },
+    {
+      "id": "approvals-and-sandbox",
+      "source_ids": [
+        "codex/approvals-security",
+        "codex/sandboxing"
+      ],
+      "tasks": [
+        {
+          "id": "codex-classify-operation-boundaries",
+          "kind": "practice"
+        },
+        {
+          "id": "codex-verify-approval-path",
+          "kind": "verify"
+        }
+      ]
+    },
+    {
+      "id": "implementation-loop",
+      "source_ids": [
+        "codex/best-practices",
+        "codex/code-review"
+      ],
+      "tasks": [
+        {
+          "id": "codex-complete-implementation-loop",
+          "kind": "practice"
+        },
+        {
+          "id": "codex-review-diff-and-tests",
+          "kind": "verify"
+        }
+      ]
+    },
+    {
+      "id": "mcp",
+      "source_ids": [
+        "codex/mcp"
+      ],
+      "tasks": [
+        {
+          "id": "codex-connect-read-only-mcp",
+          "kind": "practice"
+        },
+        {
+          "id": "codex-audit-mcp-scope",
+          "kind": "verify"
+        }
+      ]
+    },
+    {
+      "id": "skills-and-plugins",
+      "source_ids": [
+        "codex/build-skills",
+        "codex/skills-and-plugins"
+      ],
+      "tasks": [
+        {
+          "id": "codex-package-repeatable-workflow",
+          "kind": "practice"
+        },
+        {
+          "id": "codex-verify-reusable-capability",
+          "kind": "verify"
+        }
+      ]
+    },
+    {
+      "id": "cloud-and-ci",
+      "source_ids": [
+        "codex/cloud",
+        "codex/github-action"
+      ],
+      "tasks": [
+        {
+          "id": "codex-inspect-cloud-ci-flow",
+          "kind": "practice"
+        },
+        {
+          "id": "codex-verify-no-remote-write",
+          "kind": "verify"
+        }
+      ]
+    }
+  ]
+}

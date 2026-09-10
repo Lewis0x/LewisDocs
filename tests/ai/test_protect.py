@@ -13,6 +13,7 @@ from scripts.ai.protect import (
     ProtectedMarkdown,
     protect_markdown,
     restore_and_validate,
+    restore_fenced_blocks,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -85,6 +86,94 @@ def test_protects_fence_and_language_marker_as_one_span() -> None:
     )
 
 
+def test_protects_indented_fence_inside_mdx_component() -> None:
+    """Protect fenced examples nested inside MDX components."""
+    source = """\
+<Step title="Run the example">
+  ```python Python theme={null}
+  print("Do not translate")
+  ```
+</Step>
+"""
+    _assert_protection(
+        source,
+        '<Step title="Run the example">\n@@LEWISDOCS_0000@@</Step>\n',
+        (
+            """\
+  ```python Python theme={null}
+  print("Do not translate")
+  ```
+""",
+        ),
+    )
+
+
+def test_restores_exact_source_fenced_blocks() -> None:
+    """Use source bytes for code while retaining candidate prose."""
+    source = "Before\n```python\nprint('source')\n```\nAfter\n"
+    candidate = "之前\n```python\nprint('translated')\n```\n之后\n"
+
+    restored = restore_fenced_blocks(source, candidate)
+
+    assert restored.text == "之前\n```python\nprint('source')\n```\n之后\n"  # noqa: S101
+    assert restored.block_count == 1  # noqa: S101
+    assert restored.changed_count == 1  # noqa: S101
+
+
+def test_restores_indented_fenced_blocks() -> None:
+    """Handle fenced examples nested inside MDX indentation."""
+    source = "  ```bash\n  printf source\n  ```\n"
+    candidate = "  ```bash\n  printf translated\n  ```\n"
+
+    restored = restore_fenced_blocks(source, candidate)
+
+    assert restored.text == source  # noqa: S101
+    assert restored.block_count == 1  # noqa: S101
+    assert restored.changed_count == 1  # noqa: S101
+
+
+@pytest.mark.parametrize("language", ["text", "markdown", "md", "plaintext"])
+def test_preserves_reader_facing_fenced_prose(language: str) -> None:
+    """Keep translated prose in explicitly reader-facing fenced examples."""
+    source = f"Before\n```{language}\nReader source\n```\nAfter\n"
+    candidate = f"Before\n```{language}\nReader candidate\n```\nAfter\n"
+
+    restored = restore_fenced_blocks(source, candidate)
+
+    assert restored.text == candidate  # noqa: S101
+    assert restored.block_count == 1  # noqa: S101
+    assert restored.changed_count == 0  # noqa: S101
+
+
+def test_rejects_fenced_block_marker_or_language_mismatch() -> None:
+    """Fail closed instead of guessing whether differently marked fences align."""
+    with pytest.raises(ValueError, match="marker or language differs"):
+        _ = restore_fenced_blocks(
+            "```text\nReader source\n```\n",
+            "```markdown\nReader candidate\n```\n",
+        )
+
+
+def test_rejects_fenced_block_count_mismatch() -> None:
+    """Do not guess how unmatched source and candidate blocks align."""
+    with pytest.raises(ValueError, match="fenced block counts differ"):
+        _ = restore_fenced_blocks(
+            "```text\nsource\n```\n",
+            "candidate prose\n",
+        )
+
+
+def test_fenced_block_restoration_is_a_noop_when_blocks_match() -> None:
+    """Report an exact no-op without changing surrounding bytes."""
+    markdown = "Before\r\n```text\r\nsame\r\n```\r\nAfter\r\n"
+
+    restored = restore_fenced_blocks(markdown, markdown)
+
+    assert restored.text == markdown  # noqa: S101
+    assert restored.block_count == 1  # noqa: S101
+    assert restored.changed_count == 0  # noqa: S101
+
+
 def test_protects_inline_code_with_delimiters() -> None:
     """Protect inline code including its Markdown delimiters."""
     _assert_protection(
@@ -100,6 +189,15 @@ def test_protects_bare_url() -> None:
         "Visit https://example.test/reference",
         "Visit @@LEWISDOCS_0000@@",
         ("https://example.test/reference",),
+    )
+
+
+def test_protects_html_attribute_url_without_consuming_its_quote() -> None:
+    """Keep an HTML attribute syntactically intact around a protected URL."""
+    _assert_protection(
+        '<img src="https://example.test/image.png?q=1" alt="Example" />',
+        '<img src="@@LEWISDOCS_0000@@" alt="Example" />',
+        ("https://example.test/image.png?q=1",),
     )
 
 

@@ -13,7 +13,17 @@ from typing import TYPE_CHECKING, Final, NoReturn
 from pydantic import ValidationError
 
 from scripts.ai.errors import AIAgentError, ErrorCode
-from scripts.ai.page_format import WARNING, AcceptedPage, first_h1, parse_accepted_page
+from scripts.ai.official_localization import (
+    official_chinese_urls,
+    validate_official_localization,
+)
+from scripts.ai.page_format import (
+    OFFICIAL_LOCALIZATION_NOTICE,
+    WARNING,
+    AcceptedPage,
+    first_h1,
+    parse_accepted_page,
+)
 
 if TYPE_CHECKING:
     from scripts.ai.types import Source, SourceId, SourceManifest
@@ -227,12 +237,56 @@ def _validate_pair(source: Source, english: AcceptedPage, chinese: AcceptedPage)
         or chinese.translation_of != source.id
     ):
         _fail(source.id)
-    attribution = f"[Official source]({source.canonical_url})\n\nContent owner: {source.owner}\n\n"
-    chinese_prefix = f"{WARNING}\n\n{attribution}"
-    if not chinese.body.startswith(chinese_prefix):
+    english_prefix = (
+        f"[Official source]({source.canonical_url})\n\nContent owner: {source.owner}\n\n"
+    )
+    english_markdown = english.body.removeprefix(english_prefix)
+    if chinese.translation_source == "official":
+        _validate_official_pair(source, english_markdown, chinese)
+        return
+
+    attributions = (
+        f"[官方来源]({source.canonical_url})\n\n内容所有者: {source.owner}\n\n",
+        f"[Official source]({source.canonical_url})\n\nContent owner: {source.owner}\n\n",
+    )
+    chinese_prefix = next(
+        (
+            f"{WARNING}\n\n{attribution}"
+            for attribution in attributions
+            if chinese.body.startswith(f"{WARNING}\n\n{attribution}")
+        ),
+        None,
+    )
+    if chinese_prefix is None:
         _fail(source.id)
     translated = chinese.body.removeprefix(chinese_prefix)
     if chinese.title != first_h1(translated) or _ENDORSEMENT_RE.search(chinese.body):
+        _fail(source.id)
+
+
+def _validate_official_pair(
+    source: Source,
+    english_markdown: str,
+    chinese: AcceptedPage,
+) -> None:
+    translation_url, _ = official_chinese_urls(source)
+    if chinese.translation_url != translation_url:
+        _fail(source.id)
+    official_prefix = (
+        f"{OFFICIAL_LOCALIZATION_NOTICE}\n\n"
+        f"[官方中文来源]({translation_url})\n\n"
+        f"内容所有者: {source.owner}\n\n"
+    )
+    if not chinese.body.startswith(official_prefix):
+        _fail(source.id)
+    localized = chinese.body.removeprefix(official_prefix)
+    if sha256(localized.encode("utf-8")).hexdigest() != chinese.localization_sha256:
+        _fail(source.id)
+    try:
+        validate_official_localization(english_markdown, localized)
+    except ValueError as exc:
+        _fail(source.id, cause=exc)
+    if chinese.title != first_h1(localized) or _ENDORSEMENT_RE.search(chinese.body):
         _fail(source.id)
 
 
